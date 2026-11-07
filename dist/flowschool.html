@@ -1,0 +1,1601 @@
+<title>FlowSchool</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,500..800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one column app shell. Sticky header with bot switch, tab strip, one working panel at a time. */
+:root{
+  --bg:#f5f3ef; --panel:#ffffff; --fg:#1d1b19; --mute:#6a655e; --line:#dcd7cf; --soft:#ece8e1;
+  --accent:#b4571b; --accent-fg:#ffffff; --accent-soft:#f6e4d6; --ok:#2f7d4f; --warn:#a8630a; --bad:#b3372e;
+  --f-display:"Archivo","Arial Narrow",Arial,sans-serif; --f-body:"IBM Plex Sans",system-ui,sans-serif; --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+:root[data-bot="rapper"]{ --accent:#14636b; --accent-soft:#d9ecee; }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#171614; --panel:#201f1c; --fg:#ece8e1; --mute:#a39d93; --line:#38352f; --soft:#2a2823;
+  --accent:#e08a4b; --accent-fg:#1a1006; --accent-soft:#3a2819; --ok:#6cc08a; --warn:#e0a24a; --bad:#ef7a70; color-scheme:dark; }
+  :root[data-bot="rapper"]:not([data-theme="light"]){ --accent:#5fc0c8; --accent-fg:#06191b; --accent-soft:#14363a; } }
+:root[data-theme="dark"]{ --bg:#171614; --panel:#201f1c; --fg:#ece8e1; --mute:#a39d93; --line:#38352f; --soft:#2a2823;
+  --accent:#e08a4b; --accent-fg:#1a1006; --accent-soft:#3a2819; --ok:#6cc08a; --warn:#e0a24a; --bad:#ef7a70; color-scheme:dark; }
+:root[data-theme="dark"][data-bot="rapper"]{ --accent:#5fc0c8; --accent-fg:#06191b; --accent-soft:#14363a; }
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:15px/1.5 var(--f-body);padding-inline:max(16px,env(safe-area-inset-left,0px)) max(16px,env(safe-area-inset-right,0px));padding-block:0 28px}
+.wrap{max-width:860px;margin:0 auto}
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding:12px 0 8px;border-bottom:1px solid var(--line)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.top{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+h1{font:800 22px/1 var(--f-display);font-stretch:80%;letter-spacing:.01em;margin:0;text-wrap:balance}
+.sub{color:var(--mute);font-size:13px;margin:2px 0 0}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--panel)}
+.seg button{border:0;background:transparent;color:var(--fg);padding:8px 14px;font:600 14px var(--f-body);cursor:pointer;min-height:40px}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-fg)}
+nav{display:flex;gap:2px;overflow-x:auto;margin-top:10px;scrollbar-width:thin}
+nav button{border:0;border-bottom:3px solid transparent;background:transparent;color:var(--mute);padding:8px 12px;font:600 14px var(--f-body);cursor:pointer;white-space:nowrap}
+nav button[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--accent)}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+main{padding-top:16px}
+section[hidden]{display:none}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px;min-width:0}
+h2{font:700 18px/1.2 var(--f-display);font-stretch:85%;margin:0 0 8px;text-wrap:balance}
+h3{font:700 15px/1.2 var(--f-body);margin:0 0 6px}
+.mute{color:var(--mute);font-size:13px}
+.btn{border:1px solid var(--line);background:var(--panel);color:var(--fg);border-radius:8px;padding:8px 12px;font:600 14px var(--f-body);cursor:pointer;min-height:40px}
+.btn:hover{border-color:var(--accent)}
+.btn.pri{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.btn:disabled{opacity:.5;cursor:default}
+.chip{border:1px solid var(--line);background:var(--soft);color:var(--fg);border-radius:999px;padding:6px 12px;font:500 13px var(--f-body);cursor:pointer}
+.chip:hover{border-color:var(--accent)}
+input[type=text],input[type=number],select,textarea{background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:9px 10px;font:15px var(--f-body);min-height:40px;max-width:100%}
+textarea{width:100%;resize:vertical;font-family:var(--f-mono);font-size:14px}
+label{font-size:13px;color:var(--mute);display:flex;flex-direction:column;gap:3px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+/* chat */
+#log{display:flex;flex-direction:column;gap:10px;min-height:260px;max-height:58vh;overflow-y:auto;padding:4px 2px}
+.msg{flex-shrink:0;max-width:92%;padding:10px 12px;border-radius:10px;white-space:pre-wrap;overflow-wrap:anywhere;border:1px solid var(--line)}
+.msg.bot{background:var(--panel);align-self:flex-start}
+.msg.me{background:var(--accent-soft);align-self:flex-end}
+.msg.pre{font-family:var(--f-mono);font-size:13px;line-height:1.55;overflow-x:auto;white-space:pre}
+.msg .x{display:block;margin-top:8px;white-space:pre-wrap;font-family:var(--f-body);font-size:14px;color:var(--mute)}
+#chips{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}
+#chatform{display:flex;gap:8px;align-items:flex-end}
+#chatform textarea{flex:1;min-height:44px;font-family:var(--f-body)}
+.notice{border-left:3px solid var(--accent);padding:6px 10px;background:var(--soft);font-size:13px;color:var(--mute);margin-bottom:12px}
+/* lessons */
+.lesson{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid var(--line)}
+.lesson:first-of-type{border-top:0}
+.pill{font-size:12px;font-weight:600;border-radius:999px;padding:2px 8px;background:var(--soft);color:var(--mute);white-space:nowrap}
+.pill.done{background:var(--accent-soft);color:var(--accent)}
+/* tools */
+.grid16{display:grid;grid-template-columns:repeat(16,minmax(46px,1fr));gap:2px;min-width:760px;font:11px var(--f-mono)}
+.cell{border:1px solid var(--line);border-radius:4px;min-height:34px;padding:2px;overflow:hidden;text-overflow:clip;white-space:nowrap;background:var(--panel)}
+.cell.b{border-color:var(--accent)}
+.cell.s{background:var(--accent);color:var(--accent-fg);font-weight:600}
+.cell.u{background:var(--soft)}
+.scroll{overflow-x:auto;padding-bottom:4px}
+.dots{display:flex;gap:10px;margin:10px 0}
+.dot{width:34px;height:34px;border-radius:50%;border:2px solid var(--line);background:var(--panel)}
+.dot.on{background:var(--accent);border-color:var(--accent)}
+.meter{position:relative;height:14px;border-radius:7px;background:var(--soft);border:1px solid var(--line);margin:8px 0}
+.meter i{position:absolute;top:-3px;width:4px;height:18px;background:var(--accent);border-radius:2px;left:50%}
+.meter b{position:absolute;left:50%;top:0;width:1px;height:100%;background:var(--mute)}
+.big{font:800 40px/1 var(--f-display);font-stretch:80%}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:14px}
+.kv dt{color:var(--mute)}.kv dd{margin:0;font-variant-numeric:tabular-nums}
+ul.plain{margin:6px 0;padding-left:18px}
+.tag{font:500 12px var(--f-mono);background:var(--soft);border-radius:4px;padding:1px 6px;margin-right:4px;display:inline-block}
+.stat{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.stat div{background:var(--soft);border-radius:8px;padding:10px}
+.stat b{display:block;font:800 26px/1.1 var(--f-display);font-stretch:80%;font-variant-numeric:tabular-nums}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div class="wrap">
+<header>
+  <div class="top">
+    <div><h1 id="title">FlowSchool</h1><p class="sub" id="tag"></p></div>
+    <div class="seg" role="group" aria-label="Choose coach"><button id="bs" type="button" aria-pressed="true">SingerFlow</button><button id="br" type="button" aria-pressed="false">BiggieFlow</button></div>
+  </div>
+  <nav role="tablist" id="tabs"></nav>
+</header>
+<main>
+  <section id="p-chat">
+    <div class="notice">Runs offline on this page: rule-based, no AI model, no internet needed. <span id="vizNote"></span></div>
+    <div class="card"><div id="log" aria-live="polite"></div><div id="chips"></div>
+      <form id="chatform"><textarea id="inp" rows="1" placeholder="Ask a question, type a command, or paste bars (Shift+Enter for a new line)" aria-label="Message"></textarea><button class="btn pri" type="submit">Send</button></form></div>
+  </section>
+  <section id="p-lessons" hidden><div class="card"><h2>Course</h2><p class="mute">Twelve lessons in four levels. Open a lesson, then say "check" for its checkpoint.</p><div id="lessonList"></div></div></section>
+  <section id="p-tools" hidden>
+    <div class="card"><label for="toolSel">Tool<select id="toolSel"></select></label></div>
+    <div id="toolBody"></div>
+  </section>
+  <section id="p-practice" hidden>
+    <div class="card"><h2>Practice plan</h2><div class="row"><label for="pmin">Minutes<input id="pmin" type="number" min="10" max="90" value="20"></label><label for="pfocus">Focus (optional)<input id="pfocus" type="text" placeholder="e.g. internal rhyme"></label><button id="pbuild" class="btn pri" type="button">Build plan</button></div><div id="plan"></div></div>
+    <div class="card" id="warmCard"><h2>Warm-up builder</h2><div class="row"><label for="wmin">Minutes<input id="wmin" type="number" min="4" max="20" value="8"></label><button id="wbuild" class="btn pri" type="button">Build warm-up</button></div><div id="warm"></div></div>
+    <div class="card"><h2>Breath timer</h2><div class="row"><label for="bsel">Pattern<select id="bsel"></select></label><button id="bgo" class="btn pri" type="button">Start</button></div><div class="big" id="bnow" aria-live="polite">&nbsp;</div><div class="mute" id="bsub"></div></div>
+    <div class="card"><h2>Safety</h2><ul class="plain" id="safe"></ul><p class="mute">General guidance, not medical advice. A doctor and a voice teacher know you best.</p></div>
+  </section>
+  <section id="p-progress" hidden><div class="card" id="prog"></div></section>
+  <section id="p-about" hidden><div class="card"><h2 id="aboutH">About</h2><p id="aboutT"></p><p class="mute">Spelling-based heuristics can be wrong on names, slang and unusual words. Lessons draw on general vocal-health guidance (for example Johns Hopkins Medicine's vocal hygiene sheet for singers and Furtado's School of Music tips for young singers) and common music-teaching practice. Reference artists are style inspirations only: nothing here clones or imitates anyone's voice or reproduces lyrics.</p><p class="mute">Your progress is saved only in this browser, if your browser allows it.</p></div></section>
+</main>
+</div>
+
+<script>
+// ===== core.js : PRNG, text helpers, spelling-based G2P, stress, rhyme, flow grid =====
+// Everything here is a HEURISTIC based on spelling. No dictionary of pronunciations, no neural model, no network.
+function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+let _rng = mulberry32((Date.now() & 0xffffffff) >>> 0);
+function seedRng(s) { _rng = mulberry32(s >>> 0); }
+const rnd = () => _rng();
+const pick = a => a[Math.floor(rnd() * a.length)];
+function shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
+
+const VOW = new Set(['iy', 'ih', 'ey', 'eh', 'ae', 'aa', 'ao', 'ow', 'uh', 'uw', 'ah', 'ay', 'aw', 'oy', 'er']);
+const isV = t => VOW.has(t);
+
+// Exceptions: irregular words whose spelling misleads the rules.
+const EXC = {};
+const TAILX = {};
+(function (raw) { raw.split('\n').forEach(l => { const m = l.split(':'); if (m.length !== 2) return; const ws = m[0].trim().split(/\s+/), ph = m[1].trim().split(' '); if (ws.length === 1) EXC[ws[0]] = m[1].trim(); else { let k = 0; while (k < ph.length && !VOW.has(ph[k])) k++; ws.forEach(w => TAILX[w] = ph.slice(k)); } }); })(`
+the:dh ah
+a:ah
+i:ay
+my by shy sly fly sky try cry why dry fry pry spy:ay
+a:ah
+of:ah v
+one:w ah n
+won:w ah n
+once:w ah n s
+two to too:t uw
+do:d uw
+who:h uw
+whom:h uw m
+you:y uw
+your:y ao r
+you're:y ao r
+are:aa r
+were:w er
+was:w ah z
+is:ih z
+his:h ih z
+this:dh ih s
+has:h ae z
+as:ae z
+says say:s ey
+said:s eh d
+says:s eh z
+have:h ae v
+give:g ih v
+live:l ih v
+love:l ah v
+above:ah b ah v
+glove:g l ah v
+dove shove:ah v
+come:k ah m
+some:s ah m
+done:d ah n
+none:n ah n
+gone:g ao n
+none:n ah n
+son sun:s ah n
+ton:t ah n
+money:m ah n iy
+honey:h ah n iy
+monkey:m ah ng k iy
+mother:m ah dh er
+brother:b r ah dh er
+other:ah dh er
+another:ah n ah dh er
+nothing:n ah th ih ng
+something:s ah m th ih ng
+touch:t ah ch
+tough rough:r ah f
+laugh:l ae f
+cough:k ao f
+though although:dh ow
+thought brought bought fought sought:th ao t
+through threw:th r uw
+thorough:th er ow
+dough:d ow
+bough:b aw
+night light might right fight sight tight bright flight height slight white write:ay t
+heart:h aa r t
+hearts:h aa r t s
+hear here:h ih r
+heard:h er d
+earth:er th
+learn:l er n
+world:w er l d
+word:w er d
+work:w er k
+worth:w er th
+worse:w er s
+love:l ah v
+move prove:m uw v
+lose:l uw z
+choose:ch uw z
+shoes:sh uw z
+whose:h uw z
+blood:b l ah d
+flood:f l ah d
+good hood wood stood:g uh d
+book look took cook hook shook brook:b uh k
+foot:f uh t
+put:p uh t
+full pull bull:p uh l
+push:p uh sh
+wolf:w uh l f
+door floor:d ao r
+poor:p uh r
+four:f ao r
+more:m ao r
+roar:r ao r
+war:w ao r
+water:w ao t er
+father:f aa dh er
+want:w aa n t
+watch:w aa ch
+what:w ah t
+was:w ah z
+want:w aa n t
+break steak:b r ey k
+great:g r ey t
+head dead bread read lead:h eh d
+heaven:h eh v ah n
+ready steady:r eh d iy
+weather feather leather:w eh dh er
+breath death:eh th
+threat:th r eh t
+sweat:s w eh t
+beautiful:b y uw t ah f ah l
+beauty:b y uw t iy
+people:p iy p ah l
+eye:ay
+eyes:ay z
+height:h ay t
+buy guy:b ay
+die lie pie tie:t ay
+friend:f r eh n d
+believe:b ih l iy v
+receive:r ih s iy v
+idea:ay d iy ah
+real:r iy l
+really:r iy l iy
+create:k r iy ey t
+area:eh r iy ah
+many any:m eh n iy
+very:v eh r iy
+every:eh v r iy
+family:f ae m l iy
+city:s ih t iy
+pretty:p r ih t iy
+already:ao l r eh d iy
+always:ao l w ey z
+all:ao l
+call fall wall tall small ball hall:ao l
+walk talk chalk:w ao k
+half calf:h ae f
+calm palm:k aa m
+salmon:s ae m ah n
+know:n ow
+knows:n ow z
+no go so show slow flow glow grow throw blow low row toe foe woe:ow
+now how cow wow brow vow:aw
+down town brown crown clown gown drown frown:aw n
+owl howl growl fowl:aw l
+allow:ah l aw
+crowd:k r aw d
+crowds:k r aw d z
+own known shown grown flown blown thrown:ow n
+bow:b ow
+gold cold hold told bold sold fold mold old scold:ow l d
+most post host ghost:ow s t
+both:b ow th
+soul:s ow l
+shoulder:sh ow l d er
+mind find kind blind grind:ay n d
+behind:b ih h ay n d
+remind:r ih m ay n d
+guard:g aa r d
+guide:g ay d
+guess:g eh s
+guitar:g ih t aa r
+together:t ah g eh dh er
+forget:f er g eh t
+forgive:f er g ih v
+begin:b ih g ih n
+target:t aa r g ih t
+gift:g ih f t
+girl:g er l
+get:g eh t
+sign:s ay n
+signs:s ay n z
+design:d ih z ay n
+child mild wild:ay l d
+climb:k l ay m
+high:h ay
+sigh thigh:ay
+eight:ey t
+weight:w ey t
+straight:s t r ey t
+they:dh ey
+grey:g r ey
+obey:ow b ey
+key:k iy
+people:p iy p ah l
+queen:k w iy n
+sure:sh uh r
+pure cure:k y uh r
+fire:f ay er
+desire:d ih z ay er
+tired:t ay er d
+hire wire:ay er
+flower power tower shower:aw er
+hour our:aw er
+there their:dh eh r
+where:w eh r
+care share:eh r
+bear wear swear pear tear:eh r
+fear near clear year dear:ih r
+tear:t ih r
+ear:ih r
+beer:b ih r
+deer:d ih r
+here:h ih r
+very:v eh r iy
+mirror:m ih r er
+ocean:ow sh ah n
+nation:n ey sh ah n
+passion:p ae sh ah n
+ocean:ow sh ah n
+vision:v ih zh ah n
+choir:k w ay er
+quiet:k w ay ah t
+science:s ay ah n s
+gym:jh ih m
+rhythm:r ih dh ah m
+rhyme:r ay m
+rhymes:r ay m z
+chorus:k ao r ah s
+echo:eh k ow
+melody:m eh l ah d iy
+harmony:h aa r m ah n iy
+music:m y uw z ih k
+singer:s ih ng er
+singing:s ih ng ih ng
+finger:f ih ng g er
+anger:ae ng g er
+hunger:h ah ng g er
+longer:l ao ng g er
+stronger:s t r ao ng g er
+younger:y ah ng g er
+young:y ah ng
+country:k ah n t r iy
+couple:k ah p ah l
+double:d ah b ah l
+trouble:t r ah b ah l
+cousin:k ah z ah n
+enough:ih n ah f
+bye:b ay
+okay:ow k ey
+yeah:y eh
+yes:y eh s
+oh:ow
+ooh:uw
+uh:ah
+hey:h ey
+yo:y ow
+mic:m ay k
+mike:m ay k
+beat:b iy t
+bar:b aa r
+bars:b aa r z
+flow:f l ow
+freestyle:f r iy s t ay l
+hip:h ih p
+hop:h aa p
+rap:r ae p
+rapper:r ae p er
+`);
+
+const ONSET_V = 'aeiou';
+const isVowelCh = c => ONSET_V.indexOf(c) >= 0;
+
+function g2pRaw(w) {
+  // w: lowercase letters only, no exception hit. Returns tokens.
+  const n = w.length, out = [];
+  const magic = /^(.*?)([aeiou])([^aeiou]|qu)e$/.test(w) ? w.length - 2 : -1; // index of silent-e vowel's consonant pos
+  let i = 0;
+  const at = k => w[k] || '';
+  const rest = k => w.slice(k);
+  const nextIsFinalE = k => (k + 2 === n - 1 && w[n - 1] === 'e' && !isVowelCh(w[k + 1])); // V C e#
+  while (i < n) {
+    const c = w[i], r = rest(i), prev = w[i - 1] || '';
+    let m;
+    // --- consonants ---
+    if (i === 0 && (m = /^(kn|gn|pn)/.exec(r))) { out.push('n'); i += 2; continue; }
+    if (i === 0 && r.startsWith('wr')) { out.push('r'); i += 2; continue; }
+    if (i === 0 && r.startsWith('wh')) { out.push('w'); i += 2; continue; }
+    if (r.startsWith('tch')) { out.push('ch'); i += 3; continue; }
+    if (r.startsWith('dge')) { out.push('jh'); i += 3; continue; }
+    if (r.startsWith('dg')) { out.push('jh'); i += 2; continue; }
+    if (r.startsWith('ch')) { out.push('ch'); i += 2; continue; }
+    if (r.startsWith('sh')) { out.push('sh'); i += 2; continue; }
+    if (r.startsWith('th')) { out.push('th'); i += 2; continue; }
+    if (r.startsWith('ph')) { out.push('f'); i += 2; continue; }
+    if (r.startsWith('ck')) { out.push('k'); i += 2; continue; }
+    if (r.startsWith('ng')) { out.push('ng'); i += 2; continue; }
+    if (r.startsWith('nk')) { out.push('ng'); out.push('k'); i += 2; continue; }
+    if (r.startsWith('qu')) { out.push('k'); out.push('w'); i += 2; continue; }
+    if (r.startsWith('mb') && i + 2 === n) { out.push('m'); i += 2; continue; }
+    if (/^tion$|^tions$/.test(r)) { out.push('sh', 'ah', 'n'); i += 4; continue; }
+    if (/^sion/.test(r) && i > 0) { out.push('zh', 'ah', 'n'); i += 4; continue; }
+    if (/^ture/.test(r) && i > 0) { out.push('ch', 'er'); i += 4; continue; }
+    if (r.startsWith('gh')) { if (i === 0) { out.push('g'); } i += 2; continue; }
+    if (c === 'x') { out.push('k', 's'); i++; continue; }
+    if (c === 'c') { out.push(/^c[eiy]/.test(r) ? 's' : 'k'); i += (at(i + 1) === 'c' && !/^cc[eiy]/.test(r)) ? 2 : 1; continue; }
+    if (c === 'g') { out.push(/^g[eiy]/.test(r) && i > 0 || /^g[ei]/.test(r) && i === 0 && false ? 'jh' : 'g'); i += at(i + 1) === 'g' ? 2 : 1; continue; }
+    if (c === 'j') { out.push('jh'); i++; continue; }
+    if (c === 'q') { out.push('k'); i++; continue; }
+    if (c === 'y' && (i === 0 || isVowelCh(prev) && false)) { out.push('y'); i++; continue; }
+    if (c === 'w' && !isVowelCh(prev) || c === 'w' && i === 0) { out.push('w'); i++; continue; }
+    if ('bdfhklmnprstvz'.includes(c)) {
+      if (c === 'h' && i > 0 && 'ctsgp'.includes(prev)) { i++; continue; }
+      if (c === 's' && at(i + 1) === 'h') { out.push('sh'); i += 2; continue; }
+      out.push(c === 's' && isVowelCh(prev) && at(i + 1) === '' ? 'z' : c); i += (at(i + 1) === c && c !== 's' || (c === 's' && at(i + 1) === 's')) ? 2 : 1; continue;
+    }
+    // --- vowels & y/w as vowels ---
+    // final silent e
+    if (c === 'e' && i === n - 1 && i > 0) {
+      if (/[^aeiou]l$/.test(w.slice(0, i + 0)) && /[^aeiou]le$/.test(w) && !(magic >= 0 && 0)) { /* handled by -le below */ }
+      i++; continue;
+    }
+    if (r === 'le' && i > 1 && !isVowelCh(prev)) { out.push('ah', 'l'); i += 2; continue; }
+    if (r === 'les' && i > 1 && !isVowelCh(prev)) { out.push('ah', 'l', 'z'); i += 3; continue; }
+    // vowel digraphs / trigraphs
+    const dg = (re, toks) => { const mm = re.exec(r); if (mm) { toks.forEach(t => out.push(t)); i += mm[0].length; return true; } return false; };
+    if (dg(/^ign/, ['ay', 'n'])) continue;
+    if (dg(/^igh/, ['ay'])) continue;
+    if (dg(/^eigh/, ['ey'])) continue;
+    if (dg(/^ough/, ['ao']) ) continue;
+    if (dg(/^ear(?=[^aeiou]|$)/, i === 0 ? ['er'] : ['ih', 'r'])) continue;
+    if (dg(/^oar/, ['ao', 'r'])) continue;
+    if (dg(/^oor/, ['ao', 'r'])) continue;
+    if (dg(/^our/, ['aw', 'er'])) continue;
+    if (dg(/^ai/, ['ey'])) continue;
+    if (dg(/^ay/, ['ey'])) continue;
+    if (dg(/^ey$/, ['iy'])) continue;
+    if (dg(/^ey/, ['ey'])) continue;
+    if (dg(/^ee/, ['iy'])) continue;
+    if (dg(/^ea/, ['iy'])) continue;
+    if (dg(/^oa/, ['ow'])) continue;
+    if (dg(/^oo/, ['uw'])) continue;
+    if (dg(/^oi|^oy/, ['oy'])) continue;
+    if (dg(/^ou/, ['aw'])) continue;
+    if (dg(/^ow$|^ow(?=n$)/, ['ow'])) continue;
+    if (dg(/^ow/, ['ow'])) continue;
+    if (dg(/^au|^aw/, ['ao'])) continue;
+    if (dg(/^ew/, ['uw'])) continue;
+    if (dg(/^eu/, ['uw'])) continue;
+    if (dg(/^ie$/, ['ay'])) continue;
+    if (dg(/^ie/, ['iy'])) continue;
+    if (dg(/^ui/, ['uw'])) continue;
+    if (dg(/^ue$/, ['uw'])) continue;
+    if (dg(/^ei/, ['iy'])) continue;
+    // r-colored
+    if (dg(/^ar(?![aeiou])/, ['aa', 'r'])) continue;
+    if (dg(/^or(?![aeiou])/, ['ao', 'r'])) continue;
+    if (dg(/^[eiu]r(?![aeiou])/, ['er'])) continue;
+    if (dg(/^are/, ['eh', 'r'])) continue;
+    if (dg(/^ore/, ['ao', 'r'])) continue;
+    if (dg(/^ire/, ['ay', 'er'])) continue;
+    if (dg(/^ure/, ['uh', 'r'])) continue;
+    if (dg(/^ere/, ['ih', 'r'])) continue;
+    if (dg(/^all/, ['ao', 'l'])) continue;
+    if (dg(/^alk/, ['ao', 'k'])) continue;
+    if (dg(/^ild/, ['ay', 'l', 'd'])) continue;
+    if (dg(/^ind(?=$)/, ['ay', 'n', 'd'])) continue;
+    if (dg(/^old$/, ['ow', 'l', 'd'])) continue;
+    if (dg(/^ost$/, ['ow', 's', 't'])) continue;
+    // single vowels: magic e (V C e at end) -> long
+    const longV = nextIsFinalE(i);
+    if (c === 'a') { out.push(longV ? 'ey' : 'ae'); i++; continue; }
+    if (c === 'e') { out.push(longV ? 'iy' : (i === n - 2 && at(i + 1) === 's' || i === n - 2 && at(i + 1) === 'd') && i > 1 ? 'ih' : 'eh'); i++; continue; }
+    if (c === 'i') { out.push(longV ? 'ay' : 'ih'); i++; continue; }
+    if (c === 'o') { out.push(longV || i === n - 1 ? 'ow' : (/^o[bdgmnpst]?[aeiou]/.test(r) && !isVowelCh(at(i + 1)) && /^o[^aeiou][aeiouy]/.test(r) && i + 2 < n && !/^o[^aeiou]{2}/.test(r)) ? 'ow' : 'aa'); i++; continue; }
+    if (c === 'u') { out.push(longV ? 'uw' : 'ah'); i++; continue; }
+    if (c === 'y') { out.push(i === n - 1 ? (out.filter(isV).length === 0 ? 'ay' : 'iy') : 'ih'); i++; continue; }
+    if (c === 'w') { out.push('w'); i++; continue; }
+    i++;
+  }
+  return out;
+}
+
+function g2p(word) {
+  let w = String(word).toLowerCase().replace(/[^a-z]/g, '');
+  if (!w) return [];
+  if (EXC[w]) return EXC[w].split(' ');
+  if (TAILX[w]) { const mo = w.match(/^y?[^aeiouy]*/)[0]; return (mo ? g2pRaw(mo) : []).concat(TAILX[w]); }
+  let m;
+  // suffix handling on a recursively converted base
+  if (w.length > 4 && (m = /^(.+)ing$/.exec(w))) {
+    let b = m[1];
+    if (/([^aeiou])\1$/.test(b) && !/(ll|ss|ff|zz)$/.test(b)) b = b.slice(0, -1);
+    else if (/[^aeiou][aeiou][^aeiouwxy]$/.test(b) && countV(g2p(b)) === 1) b += 'e';
+    return g2p(b).concat(['ih', 'ng']);
+  }
+  if (w.length > 3 && (m = /^(.+?)(ied|ies)$/.exec(w))) { const t = g2p(m[1] + 'y'); return m[2] === 'ied' ? t.concat(['d']) : t.concat(['z']); }
+  if (w.length > 3 && (m = /^(.+)ed$/.exec(w)) && !/^(bed|red|fed|wed|shed|sled|need|feed|seed|speed|bleed|breed|weed|deed|greed|creed|indeed|hundred|sacred|naked)$/.test(w)) {
+    let b = m[1];
+    if (/([^aeiou])\1$/.test(b) && !/(ll|ss|ff|zz)$/.test(b)) b = b.slice(0, -1);
+    else if (/[^aeiou][aeiou][^aeiouwxy]$/.test(b) && countV(g2p(b)) === 1 && !/[td]$/.test(b)) b += 'e';
+    else if (/[^aeiou][aeiou][^aeiouwxy]$/.test(b) && /[td]$/.test(b) && countV(g2p(b)) === 1) b += 'e';
+    const t = g2p(b), last = t[t.length - 1];
+    if (last === 't' || last === 'd') return t.concat(['ih', 'd']);
+    return t.concat([['p', 'k', 'f', 's', 'sh', 'ch', 'th'].includes(last) ? 't' : 'd']);
+  }
+  if (w.length > 2 && /[^suiao]s$|[aeiou]s$/.test(w) && !/(ss|us|is|as|ous)$/.test(w) && (m = /^(.+?)(es|s)$/.exec(w))) {
+    let b = m[2] === 'es' && /(s|x|z|ch|sh|c|g)es$/.test(w) ? w.slice(0, -2) : (m[2] === 'es' ? w.slice(0, -1) : w.slice(0, -1));
+    if (b.length >= 2) {
+      const t = g2p(b), last = t[t.length - 1];
+      if (['s', 'z', 'sh', 'ch', 'jh', 'zh'].includes(last)) return t.concat(['ih', 'z']);
+      return t.concat([['p', 't', 'k', 'f', 'th'].includes(last) ? 's' : 'z']);
+    }
+  }
+  const t = g2pRaw(w);
+  return t.length ? t : ['ah'];
+}
+const countV = t => t.filter(isV).length;
+function syllables(word) { return Math.max(1, countV(g2p(word))); }
+
+// ---- stress ----
+const FUNCTION_WORDS = new Set('a an the and but or nor so yet for of to in on at by with from up as is am are was were be been being it its i me my we us our you your he him his she her they them their this that these those do does did have has had will would can could shall should may might must not no if then than there here when what who which how all just very too'.split(' '));
+const STRESS_FINAL_PREFIX = /^(a|be|de|re|ex|in|im|un|dis|pre|pro|con|com|per|sur|ap|ar|al|ad|ob|sup|sus|mis|en|em|for|fore|to|re)(?=[^aeiou])/;
+const FIRST_STRESS_SUFFIX = /(ing|er|ly|y|le|en|ow|ed|ness|ful|less|ment|est|ure|age|ish|on|et|ent|al|ic|ie)$/;
+function stressIndex(word, nSyl) {
+  const w = word.toLowerCase().replace(/[^a-z]/g, '');
+  if (nSyl <= 1) return 0;
+  if (/(tion|sion|tions|sions|ic|ics|ial|ian|ious|eous|ity|ify)$/.test(w) && nSyl >= 3) { if (/(ity|ify)$/.test(w)) return nSyl - 3; return nSyl - 2; }
+  if (/(ate|ize|ise|fy)$/.test(w) && nSyl >= 3) return nSyl - 3;
+  if (nSyl === 2) {
+    if (/(ing|er|ly|y|le|en|ow|ed|ness|ful|less|ment|est|age|ish|et|ure|ie|ey|ay)$/.test(w) && !/^(be|de|re|a)(?=[^aeiou])/.test(w) || /^(.)\1/.test(w)) return 0;
+    if (STRESS_FINAL_PREFIX.test(w)) return 1;
+    if (/(ee|oo|ain|ide|ire|eep|ound|ove|ose|ate|ake|ine)$/.test(w) && w.length > 4) return 1;
+    return 0;
+  }
+  if (STRESS_FINAL_PREFIX.test(w) && /^(be|de|re|a|con|ex|pre|pro|per|sur)/.test(w) && nSyl === 3) return 1;
+  return 0;
+}
+
+// Break a word into syllables with phoneme tokens: [{ph:[...], v:'ey', onset:[..], coda:[..], stress:0|1}]
+function syllabify(word) {
+  const t = g2p(word), vi = []; t.forEach((x, i) => { if (isV(x)) vi.push(i); });
+  if (!vi.length) return [{ ph: t.slice(), v: null, onset: t.slice(), coda: [], stress: 1, text: word }];
+  const sy = []; let start = 0;
+  for (let k = 0; k < vi.length; k++) {
+    const nextV = vi[k + 1];
+    let end;
+    if (nextV === undefined) end = t.length;
+    else { const between = nextV - vi[k] - 1; end = vi[k] + 1 + (between >= 2 ? Math.floor(between / 2) : 0); if (between >= 2 && t[nextV - 1] === 'l' && between === 2 && 'pbkgf'.includes(t[nextV - 2])) end = vi[k] + 1; if (between === 2 && ['s'].includes(t[vi[k] + 1])) end = vi[k] + 1; }
+    const ph = t.slice(start, end);
+    const vpos = ph.findIndex(isV);
+    sy.push({ ph, v: ph[vpos], onset: ph.slice(0, vpos), coda: ph.slice(vpos + 1), stress: 0 });
+    start = end;
+  }
+  const si = stressIndex(word, sy.length);
+  sy.forEach((s, i) => s.stress = i === si ? 1 : 0);
+  return sy;
+}
+
+// ---- rhyme ----
+const SIB = { z: 's', zh: 'sh', jh: 'ch', d: 't', g: 'k', b: 'p', v: 'f', dh: 'th' }; // voicing pairs for "near" comparison
+function stressedTail(word) {
+  const sy = syllabify(word); let si = sy.findIndex(s => s.stress === 1); if (si < 0) si = sy.length - 1;
+  const tail = [].concat(...sy.slice(si).map(s => s.ph));
+  return { tail, v: sy[si].v, coda: sy[si].coda.concat(...sy.slice(si + 1).map(s => s.ph)), nAfter: sy.length - 1 - si, sy };
+}
+const norm1 = t => t === 'z' ? 's' : t;
+function rhymeRelation(a, b) {
+  a = String(a).toLowerCase().replace(/[^a-z]/g, ''); b = String(b).toLowerCase().replace(/[^a-z]/g, '');
+  if (!a || !b) return { type: 'none', score: 0 };
+  if (a === b) return { type: 'same', score: 0 };
+  const A = stressedTail(a), B = stressedTail(b);
+  const ta = A.tail.map(norm1).join(' '), tb = B.tail.map(norm1).join(' ');
+  if (ta === tb && A.nAfter === B.nAfter) return { type: 'perfect', score: 1 };
+  // perfect if same vowel and same coda (ignoring s/z), differing syllable count after stress tolerated only when equal
+  if (A.v === B.v) {
+    const ca = A.coda.map(norm1).join(' '), cb = B.coda.map(norm1).join(' ');
+    if (ca === cb) return { type: 'perfect', score: 0.95 };
+    const sa = A.coda.map(x => SIB[x] || x).join(' '), sb = B.coda.map(x => SIB[x] || x).join(' ');
+    if (sa === sb) return { type: 'near', score: 0.7 };
+    return { type: 'slant', score: 0.55, why: 'same vowel (assonance)' };
+  }
+  const ca = A.coda.map(norm1).join(' '), cb = B.coda.map(norm1).join(' ');
+  if (ca && ca === cb) return { type: 'slant', score: 0.45, why: 'same ending consonants (consonance)' };
+  const FAM = [['ih', 'iy'], ['eh', 'ey', 'ae'], ['aa', 'ao', 'ow'], ['uh', 'uw', 'ow'], ['ah', 'aa'], ['ay', 'ey']];
+  if (FAM.some(f => f.includes(A.v) && f.includes(B.v)) && ca === cb) return { type: 'near', score: 0.4, why: 'similar vowels' };
+  return { type: 'none', score: 0 };
+}
+// Multisyllabic: compare the vowel sequence at the end of two phrases
+function vowelSeq(text) { const ws = (text.toLowerCase().match(/[a-z']+/g) || []); const seq = []; ws.forEach(w => g2p(w).forEach(t => { if (isV(t)) seq.push(t); })); return seq; }
+function multiMatch(a, b) {
+  const x = vowelSeq(a), y = vowelSeq(b); let n = 0;
+  while (n < x.length && n < y.length && x[x.length - 1 - n] === y[y.length - 1 - n]) n++;
+  return n;
+}
+function lastWord(line) { const w = (String(line).toLowerCase().match(/[a-z']+/g) || []); return w.length ? w[w.length - 1].replace(/'/g, '') : ''; }
+function tokensOf(line) { return (String(line).match(/[A-Za-z']+/g) || []).map(w => w.replace(/'/g, '')).filter(Boolean); }
+
+// ---- flow grid ----
+const SLOT_W = [3, 1, 2, 1, 3, 1, 2, 1, 3, 1, 2, 1, 3, 1, 2, 1]; // 16th-note weights: beats 1-4 strongest, offbeat 8ths next
+function lineSyllables(line) {
+  const out = [];
+  tokensOf(line).forEach(w => {
+    const sy = syllabify(w), fw = FUNCTION_WORDS.has(w.toLowerCase());
+    sy.forEach((s, i) => out.push({ w, i, n: sy.length, stress: (!fw || sy.length > 1) && s.stress === 1 && !(fw && sy.length === 1) ? 1 : 0, wordEnd: i === sy.length - 1, fw }));
+  });
+  return out;
+}
+function placeBar(syl) {
+  const n = syl.length; if (!n) return null;
+  const cands = [];
+  const score = slots => { let s = 0; syl.forEach((x, i) => { if (x.stress) s += SLOT_W[slots[i]] * 2; else s += (SLOT_W[slots[i]] === 1 ? 0.4 : 0); }); const last = slots[n - 1]; if (last >= 11) s += 2; if (last >= 15 && false) s -= 1; return s; };
+  if (n <= 16) {
+    for (let off = 0; off <= Math.min(3, 16 - n); off++) cands.push({ kind: 'packed', slots: syl.map((_, i) => off + i) });
+    for (let off = 0; off <= 3; off++) { const slots = syl.map((_, i) => Math.min(15, Math.floor(off + i * (16 - off) / n))); let ok = true; for (let i = 1; i < n; i++) if (slots[i] <= slots[i - 1]) ok = false; if (ok) cands.push({ kind: 'spread', slots }); }
+    // stress-snapped: put each stressed syllable on the nearest strong slot that keeps order
+    const snap = []; let prev = -1; syl.forEach((x, i) => { const ideal = Math.round(i * 16 / n); let s = Math.max(prev + 1, Math.min(ideal, 15 - (n - 1 - i))); if (x.stress) { let best = s, bw = -1; for (let t = Math.max(prev + 1, s - 1); t <= Math.min(15 - (n - 1 - i), s + 1); t++) if (SLOT_W[t] > bw) { bw = SLOT_W[t]; best = t; } s = best; } snap.push(s); prev = s; });
+    cands.push({ kind: 'snapped', slots: snap });
+  } else {
+    return { kind: 'overflow', slots: null };
+  }
+  let best = null; cands.forEach(c => { c.score = score(c.slots); if (!best || c.score > best.score + 1e-9) best = c; });
+  return best;
+}
+function analyzeBar(line) {
+  const syl = lineSyllables(line), n = syl.length;
+  if (!n) return { n: 0, text: line, grid: Array(16).fill(null), notes: ['Empty bar.'] };
+  const pl = placeBar(syl), notes = [];
+  const stressed = syl.filter(s => s.stress).length;
+  let onBeat = 0, onBack = 0, grid = Array(16).fill(null), pocket = 0;
+  if (pl.slots) {
+    pl.slots.forEach((sl, i) => { grid[sl] = { t: syl[i].w + (syl[i].n > 1 ? '·' + (syl[i].i + 1) : ''), stress: syl[i].stress, w: syl[i].w, wordEnd: syl[i].wordEnd }; if (syl[i].stress && sl % 4 === 0) onBeat++; if (syl[i].stress && (sl === 4 || sl === 12)) onBack++; });
+    pocket = stressed ? onBeat / stressed : 0;
+  }
+  const dens = n <= 6 ? 'spacious' : n <= 10 ? 'steady' : n <= 14 ? 'busy' : n <= 16 ? 'packed' : 'overflow';
+  if (dens === 'overflow') notes.push(n + ' syllables will not fit one bar on a 16-slot grid. Split it into two bars, or treat it as double-time and say so.');
+  if (dens === 'packed') notes.push('Packed: almost every 16th note is filled, so there is no room to breathe. Cut a word or move the break.');
+  if (dens === 'spacious') notes.push('Spacious: lots of room. Good for punchlines or laid-back delivery; add a pickup or a tag if it feels empty.');
+  if (pl.slots) {
+    const empties = [0, 4, 8, 12].filter(b => !grid[b]).length;
+    if (empties >= 2) notes.push(empties + ' of the 4 main beats have no syllable. That can feel like a gap; fill with a word or lean on it deliberately.');
+    if (stressed && pocket < 0.5) notes.push('Only ' + onBeat + ' of ' + stressed + ' stressed syllables land on a beat in my best placement. Try shifting where the line starts (a pickup) or swap a word so a stressed one lands on the beat.');
+    const last = pl.slots[n - 1]; if (last < 11) notes.push('The bar ends early (slot ' + (last + 1) + ' of 16). Ending later makes the rhyme land closer to the 4.');
+  }
+  return { n, text: line, syl, kind: pl.kind, grid, stressed, onBeat, onBack, pocket, density: dens, notes, end: pl.slots ? pl.slots[n - 1] : null };
+}
+function gridString(a) { // 16 cells, readable
+  if (!a.grid) return ''; const beats = [];
+  for (let b = 0; b < 4; b++) { const cells = []; for (let k = 0; k < 4; k++) { const c = a.grid[b * 4 + k]; cells.push(c ? (c.stress ? 'X' : 'x') : '.'); } beats.push(cells.join(' ')); }
+  return beats.join(' | ');
+}
+
+// ---- verse analysis ----
+function schemeLetters(lines) {
+  const ends = lines.map(lastWord), letters = [], reps = []; let next = 0;
+  ends.forEach((w, i) => {
+    let found = -1;
+    for (let j = 0; j < reps.length; j++) { const r = rhymeRelation(w, reps[j].w); if (r.type === 'perfect' || r.type === 'same' || r.type === 'slant' && r.score >= 0.55 || r.type === 'near' && r.score >= 0.7) { found = j; break; } }
+    if (found < 0) { reps.push({ w, L: String.fromCharCode(65 + next++) }); letters.push(reps[reps.length - 1].L); } else letters.push(reps[found].L);
+  });
+  return letters;
+}
+function internalRhymes(line) {
+  const ws = tokensOf(line).filter(w => !FUNCTION_WORDS.has(w.toLowerCase()) && w.length > 2), out = [];
+  for (let i = 0; i < ws.length; i++) for (let j = i + 1; j < ws.length; j++) { if (ws[i].toLowerCase() === ws[j].toLowerCase()) continue; const r = rhymeRelation(ws[i], ws[j]); if (r.type === 'perfect' || r.type === 'slant' && r.score >= 0.55) out.push([ws[i], ws[j], r.type]); }
+  return out;
+}
+function alliteration(line) {
+  const ws = tokensOf(line).filter(w => !FUNCTION_WORDS.has(w.toLowerCase())); let run = 1, best = 1, pairs = 0;
+  const on = w => { const s = syllabify(w)[0]; return s.onset[0] || s.v; };
+  for (let i = 1; i < ws.length; i++) { if (on(ws[i]) === on(ws[i - 1])) { run++; pairs++; best = Math.max(best, run); } else run = 1; }
+  return { pairs, run: best };
+}
+function analyzeVerse(text) {
+  const lines = String(text).split(/\n+/).map(s => s.trim()).filter(Boolean).slice(0, 32);
+  const bars = lines.map(analyzeBar), scheme = schemeLetters(lines);
+  const ints = lines.map(internalRhymes), alli = lines.map(alliteration);
+  const multi = lines.map((l, i) => i ? Math.max(multiMatch(lines[i - 1], l), 0) : 0);
+  const syl = bars.map(b => b.n), avg = syl.reduce((a, b) => a + b, 0) / (syl.length || 1);
+  const sd = Math.sqrt(syl.reduce((a, b) => a + (b - avg) * (b - avg), 0) / (syl.length || 1));
+  const runOn = lines.map(l => !/[.!?;:]$|,$/.test(l));
+  const tips = [];
+  if (lines.length < 2) tips.push('Paste at least 2 bars (one per line) so I can look at rhyme and consistency.');
+  else {
+    const counts = {}; scheme.forEach(c => counts[c] = (counts[c] || 0) + 1);
+    const rhymed = scheme.filter(c => counts[c] > 1).length;
+    if (rhymed / lines.length < 0.5) tips.push('Fewer than half your bars share an end rhyme with another bar. Pick one rhyme family for the verse and write toward it.');
+    else tips.push('End rhymes: scheme ' + scheme.join('') + '. ' + Math.round(100 * rhymed / lines.length) + '% of bars share an ending sound.');
+    if (sd > 3) tips.push('Bar lengths swing a lot (' + Math.min(...syl) + ' to ' + Math.max(...syl) + ' syllables). Some variation is style; this much can sound like stumbling. Even out the shortest and longest.');
+    else tips.push('Bar lengths are consistent (about ' + avg.toFixed(1) + ' syllables).');
+    const totInt = ints.reduce((a, x) => a + x.length, 0);
+    if (!totInt) tips.push('No internal rhymes found. Try rhyming a word in the middle of the bar with the end word.');
+    else tips.push('Internal rhymes found: ' + totInt + '. Nice texture.');
+    if (Math.max(...multi) >= 3) tips.push('Multisyllabic match of ' + Math.max(...multi) + ' vowel sounds between neighbouring bars. That is the dense kind of rhyme.');
+    else tips.push('Try one multisyllabic rhyme (match 2-3 vowel sounds, not just the last one), like "the kind of" with "I find a".');
+    const pk = bars.filter(b => b.stressed).map(b => b.pocket), pm = pk.length ? pk.reduce((a, b) => a + b, 0) / pk.length : 0;
+    tips.push('Pocket estimate: ' + Math.round(pm * 100) + '% of stressed syllables sit on a main beat in the best placement I can find. Rap often lives off the beat on purpose, so treat this as a conversation starter.');
+  }
+  return { lines, bars, scheme, ints, alli, multi, avg, sd, runOn, tips };
+}
+function barSeconds(bpm, beats) { return (60 / bpm) * (beats || 4); }
+
+// ===== music.js : notes, intervals, scales, runs, warm-ups, consonant coach, breath, timing, practice plans =====
+const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+const midiToHz = m => 440 * Math.pow(2, (m - 69) / 12);
+const midiName = m => NOTE_NAMES[((m % 12) + 12) % 12] + (Math.floor(m / 12) - 1);
+function noteToMidi(s) {
+  const m = /^\s*([A-Ga-g])([#b♯♭]?)(-?\d)\s*$/.exec(String(s)); if (!m) return null;
+  const base = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }[m[1].toUpperCase()];
+  const acc = (m[2] === '#' || m[2] === '♯') ? 1 : (m[2] === 'b' || m[2] === '♭') ? -1 : 0;
+  return base + acc + (parseInt(m[3], 10) + 1) * 12;
+}
+function hzToNote(hz) { if (!(hz > 0)) return null; const m = 69 + 12 * Math.log2(hz / 440), r = Math.round(m); return { midi: r, name: midiName(r), cents: Math.round((m - r) * 100) }; }
+function centsBetween(f, ref) { return 1200 * Math.log2(f / ref); }
+
+const INTERVALS = [
+  { n: 0, name: 'unison', short: 'P1' }, { n: 1, name: 'minor 2nd', short: 'm2' }, { n: 2, name: 'major 2nd', short: 'M2' },
+  { n: 3, name: 'minor 3rd', short: 'm3' }, { n: 4, name: 'major 3rd', short: 'M3' }, { n: 5, name: 'perfect 4th', short: 'P4' },
+  { n: 6, name: 'tritone', short: 'TT' }, { n: 7, name: 'perfect 5th', short: 'P5' }, { n: 8, name: 'minor 6th', short: 'm6' },
+  { n: 9, name: 'major 6th', short: 'M6' }, { n: 10, name: 'minor 7th', short: 'm7' }, { n: 11, name: 'major 7th', short: 'M7' }, { n: 12, name: 'octave', short: 'P8' }
+];
+const INTERVAL_SONG_HINTS = { 7: 'perfect 5th (the first two notes of "Twinkle Twinkle")', 12: 'octave (the first two notes of "Somewhere Over the Rainbow")', 5: 'perfect 4th (the first two notes of "Here Comes the Bride")', 4: 'major 3rd (the first two notes of "When the Saints Go Marching In")' };
+function intervalQuestion(maxN) {
+  const pool = INTERVALS.filter(i => i.n > 0 && i.n <= (maxN || 12)), it = pick(pool), low = 55 + Math.floor(rnd() * 10); // G3..E4: comfortable
+  return { low, high: low + it.n, answer: it.n, name: it.name, text: 'Starting on ' + midiName(low) + ', what note is a ' + it.name + ' above? (that is ' + it.n + ' semitones)' , note: midiName(low + it.n) };
+}
+
+const SCALES = {
+  'major pentatonic': [0, 2, 4, 7, 9], 'minor pentatonic': [0, 3, 5, 7, 10], 'blues': [0, 3, 5, 6, 7, 10],
+  'major': [0, 2, 4, 5, 7, 9, 11], 'natural minor': [0, 2, 3, 5, 7, 8, 10]
+};
+function scaleNotes(tonic, scaleName, lo, hi) {
+  const iv = SCALES[scaleName] || SCALES['major pentatonic'], out = [];
+  for (let base = tonic - 12; base <= tonic + 24; base += 12) iv.forEach(i => { const m = base + i; if (m >= lo && m <= hi) out.push(m); });
+  return out.sort((a, b) => a - b);
+}
+// Run builder: bounded to one octave, stepwise cells first. Gospel-style runs are decorations around a held note.
+function genRun(opts) {
+  opts = opts || {}; const tonic = opts.tonic != null ? opts.tonic : 60, sc = opts.scale || 'major pentatonic', lvl = clamp(opts.level || 1, 1, 3);
+  const win = scaleNotes(tonic, sc, tonic, tonic + 12); // one octave, tonic up
+  let dir = opts.dir || pick(['up', 'down', 'wave']); if (lvl === 3) dir = 'wave';
+  const len = [4, 6, 8][lvl - 1], seq = [];
+  if (dir === 'up') { for (let i = 0; i < Math.min(len, win.length); i++) seq.push(win[i]); }
+  else if (dir === 'down') { const top = Math.min(win.length - 1, len - 1); for (let i = 0; i < len && top - i >= 0; i++) seq.push(win[top - i]); }
+  else { const half = len / 2, st = lvl === 3 ? 0 : Math.floor(rnd() * Math.max(1, win.length - half)); for (let i = 0; i < half; i++) seq.push(win[Math.min(win.length - 1, st + i)]); for (let i = half - 1; i >= 0; i--) seq.push(win[Math.min(win.length - 1, st + i)]); }
+  return { notes: seq, names: seq.map(midiName), scale: sc, level: lvl, dir, held: tonic, tips: ['Say it slowly on one vowel (ah or oh) first, one note per beat.', 'Land the last note and hold it; a run is a decoration that leads somewhere.', 'Speed up only when every note is clean at the slow tempo. Stay relaxed; stop if your throat tightens.'] };
+}
+
+// ---- warm-ups (conservative, general guidance; a voice teacher outranks this list) ----
+const WARMUPS = [
+  { id: 'breath-reset', name: 'Easy breath reset', min: 1, kind: 'breath', steps: ['Stand or sit tall with shoulders loose.', 'Breathe in through the nose for 4 counts, letting the belly and low ribs widen.', 'Breathe out slowly on a quiet "sss" for 6 counts. Repeat 4 times.'] },
+  { id: 'sigh', name: 'Gentle sighs', min: 1, kind: 'sovt', steps: ['Sigh softly from a comfortable high note down to a comfortable low note, like a sleepy "ahh".', 'Keep the jaw loose. Do 4 sighs.'], pattern: [7, 5, 4, 2, 0] },
+  { id: 'lip-trill', name: 'Lip trills', min: 2, kind: 'sovt', steps: ['Blow air so your lips buzz (add a little voice if you can).', 'Slide gently up and down on a 5-note scale: do re mi fa sol then back.', 'If the buzz will not start, press lightly on your cheeks with your fingertips. Do not push the air hard.'], pattern: [0, 2, 4, 5, 7, 5, 4, 2, 0] },
+  { id: 'straw', name: 'Straw hum', min: 2, kind: 'sovt', steps: ['Hum through a drinking straw (or lips pursed small) on an easy pitch.', 'Glide up a 3rd and back down. Keep it quiet and buzzy in the lips, not in the throat.'], pattern: [0, 2, 4, 2, 0] },
+  { id: 'hum', name: 'Humming slides', min: 1, kind: 'hum', steps: ['Hum "mm" with lips lightly closed and teeth apart.', 'Slide up a 5th and back down. You should feel a gentle buzz at the lips and nose.'], pattern: [0, 7, 0] },
+  { id: 'vowels', name: 'Five vowels on one note', min: 2, kind: 'vowel', steps: ['On one comfortable pitch sing "ee - eh - ah - oh - oo", one beat each, changing only the mouth shape.', 'Keep the pitch steady. Watch in a mirror: jaw loose, tongue tip resting behind the lower front teeth.'], pattern: [0, 0, 0, 0, 0] },
+  { id: 'five-note', name: 'Five-note scale on "no"', min: 2, kind: 'vowel', steps: ['Sing do-re-mi-fa-sol-fa-mi-re-do on "noh" (or "nee").', 'Move up by a half step each time while it still feels easy; turn around before it feels like effort.'], pattern: [0, 2, 4, 5, 7, 5, 4, 2, 0] },
+  { id: 'consonants', name: 'Consonant clarity', min: 2, kind: 'consonant', steps: ['Say slowly then sing on one note: "b-b-b, d-d-d, g-g-g" (plosives), then "v-v-v, z-z-z, sh-sh-sh" (voiced and unvoiced air).', 'Then sing "mah-nah-lah" to feel nasal and liquid consonants.', 'Keep the pitch steady through the consonant; do not push extra breath.'], pattern: [0, 0, 0] },
+  { id: 'arpeggio', name: 'Arpeggio on "ah"', min: 2, kind: 'vowel', steps: ['Sing 1-3-5-3-1 (do-mi-sol-mi-do) on "ah" with a relaxed jaw.', 'Move up a half step at a time, staying within the part of your range that feels easy.'], pattern: [0, 4, 7, 4, 0] },
+  { id: 'cooldown', name: 'Cool-down hum', min: 1, kind: 'cool', steps: ['Hum softly from a comfortable middle pitch downward in a slow slide.', 'Finish with a few easy breaths and a sip of water.'], pattern: [7, 5, 4, 2, 0] }
+];
+const WARMUP_ORDER = ['breath-reset', 'sigh', 'lip-trill', 'straw', 'hum', 'vowels', 'five-note', 'consonants', 'arpeggio', 'cooldown'];
+function buildWarmup(minutes, level) {
+  minutes = clamp(minutes || 8, 4, 20); level = level || 1; const total = [];
+  const must = ['breath-reset', 'lip-trill', 'cooldown'], opt = WARMUP_ORDER.filter(id => !must.includes(id)).filter(id => level > 1 || id !== 'arpeggio');
+  let sum = must.reduce((a, id) => a + WARMUPS.find(w => w.id === id).min, 0); const chosen = must.slice(); let k = 0;
+  while (k < opt.length) { const w = WARMUPS.find(x => x.id === opt[k]); if (sum + w.min <= minutes) { chosen.push(w.id); sum += w.min; } k++; }
+  const order = WARMUP_ORDER.filter(id => chosen.includes(id));
+  return { minutes: sum, items: order.map(id => WARMUPS.find(w => w.id === id)) };
+}
+const VOICE_SAFETY = [
+  'Stay in the part of your range that feels easy. If it hurts, scratches or goes hoarse, stop and rest.',
+  'Sip water through the day, not only right before you sing.',
+  'Do not shout, scream or push to be louder. Use a mic and good technique instead.',
+  'Do not whisper hard or clear your throat over and over; sip water or swallow instead.',
+  'Take quiet breaks in long sessions, and sleep well. Tired voices recover better when rested.',
+  'Hoarseness that lasts more than about two weeks, pain, trouble swallowing or breathing: see a doctor (an ENT or voice specialist).',
+  'Voices change during puberty. Cracks are normal; do not force high notes or copy someone else\'s voice. A voice teacher can help.'
+];
+
+// ---- consonants for singing and rapping ----
+const CCLASS = {
+  p: ['plosive', 'unvoiced'], b: ['plosive', 'voiced'], t: ['plosive', 'unvoiced'], d: ['plosive', 'voiced'], k: ['plosive', 'unvoiced'], g: ['plosive', 'voiced'],
+  f: ['fricative', 'unvoiced'], v: ['fricative', 'voiced'], th: ['fricative', 'unvoiced'], dh: ['fricative', 'voiced'], s: ['fricative', 'unvoiced'], z: ['fricative', 'voiced'], sh: ['fricative', 'unvoiced'], zh: ['fricative', 'voiced'], h: ['fricative', 'unvoiced'],
+  m: ['nasal', 'voiced'], n: ['nasal', 'voiced'], ng: ['nasal', 'voiced'], l: ['liquid', 'voiced'], r: ['liquid', 'voiced'], w: ['glide', 'voiced'], y: ['glide', 'voiced'], ch: ['affricate', 'unvoiced'], jh: ['affricate', 'voiced']
+};
+const CTIPS = {
+  plosive: { onset: 'Plosive start: build a little pressure, then release right before the beat so the vowel lands on time. Do not blast air.', coda: 'Plosive ending: stop the sound cleanly (a quick tongue or lip closure). Decide whether to release it audibly or leave it closed.' },
+  fricative: { onset: 'Fricative start: begin the hiss a hair early; it is unvoiced noise, so the pitch starts when the vowel does.', coda: 'Fricative ending: keep the final hiss short and quiet; a long "sss" at the end of a held note sounds sharp.' },
+  nasal: { onset: 'Nasal start: hum first so the pitch is already there, then open to the vowel.', coda: 'Nasal ending: you can hold the note on "m", "n" or "ng" and close at the very end. It is a good place to hold.' },
+  liquid: { onset: 'L/R start: keep it light and quick; get to the vowel fast so the tone is not dark.', coda: 'L/R ending: shape it late, at the very end, so the vowel keeps its colour.' },
+  glide: { onset: 'W/Y start: it is almost a vowel; start already voiced and move quickly into the main vowel.', coda: 'W/Y ending: treat it as a quick vowel tail.' },
+  affricate: { onset: 'Ch/J start: a plosive and a fricative stuck together. Release smoothly; do not make it long.', coda: 'Ch/J ending: keep it short; release the breath gently.' }
+};
+function coachWord(word) {
+  const sy = syllabify(word), out = [];
+  sy.forEach((s, i) => {
+    const on = s.onset.map(t => ({ t, c: CCLASS[t] || ['?', '?'] })), co = s.coda.map(t => ({ t, c: CCLASS[t] || ['?', '?'] }));
+    const tips = []; if (on[0] && CTIPS[on[0].c[0]]) tips.push(CTIPS[on[0].c[0]].onset); if (co.length && CTIPS[co[co.length - 1].c[0]]) tips.push(CTIPS[co[co.length - 1].c[0]].coda);
+    if (!on.length) tips.push('Vowel start: begin the vowel with a soft onset (a gentle "h" feel), not a hard glottal click.');
+    out.push({ idx: i + 1, vowel: s.v, onset: on, coda: co, stress: s.stress, tips, holdable: s.coda.length === 0 || (co.length && ['nasal', 'liquid', 'glide'].includes(co[co.length - 1].c[0])) });
+  });
+  return out;
+}
+
+// ---- breath & timing ----
+const BREATH = {
+  easy: { name: 'Easy 4-out-6', phases: [['In (nose)', 4], ['Out on "sss"', 6]], rounds: 6 },
+  box: { name: 'Box 4-4-4-4', phases: [['In', 4], ['Hold gently', 4], ['Out', 4], ['Rest', 4]], rounds: 4 },
+  rap: { name: 'Rap bar breath 2-2-4', phases: [['Quick in', 2], ['Hold', 2], ['Out on "fff"', 4]], rounds: 6 },
+  long: { name: 'Long phrase 4-in-12-out', phases: [['In (low and quiet)', 4], ['Out on "sss"', 12]], rounds: 4 }
+};
+function beatMs(bpm) { return 60000 / bpm; }
+function swingOffsetMs(bpm, swing) { return (swing || 0) * (60000 / bpm) / 4; } // swing 0..1 delays the offbeat 16th
+function tapTempo(times) { if (times.length < 2) return null; const iv = []; for (let i = 1; i < times.length; i++) iv.push(times[i] - times[i - 1]); const med = iv.slice().sort((a, b) => a - b)[Math.floor(iv.length / 2)]; return Math.round(60000 / med); }
+function verseSeconds(bpm, bars) { return barSeconds(bpm, 4) * bars; }
+function sylPerSecond(syl, bpm) { return syl / barSeconds(bpm, 4); }
+
+// ---- practice plans ----
+function practicePlan(bot, minutes, level, focus) {
+  minutes = clamp(Math.round(minutes || 20), 10, 90); level = clamp(level || 1, 1, 4);
+  const B = bot === 'singer';
+  const blocks = B ? [
+    ['Warm-up (breath, lip trills, easy slides)', 0.2], ['Technique drill: ' + (focus || 'pitch and vowels'), 0.3], ['Song or phrase work (small sections, slow)', 0.3], ['Record yourself once and listen back', 0.1], ['Cool-down hum and water', 0.1]
+  ] : [
+    ['Warm-up: breath and clear-speech tongue twisters (slowly)', 0.15], ['Flow drill: ' + (focus || 'count bars on a beat'), 0.3], ['Writing: one 4-bar verse with a rhyme family', 0.3], ['Perform it out loud on a beat, record once', 0.15], ['Review: what worked, what to fix tomorrow', 0.1]
+  ];
+  let used = 0; const items = blocks.map((b, i) => { const m = i === blocks.length - 1 ? minutes - used : Math.max(1, Math.round(minutes * b[1])); used += m; return { text: b[0], min: m }; });
+  return { minutes, items, rules: B ? ['Short, regular sessions beat one long one.', 'Rest day at least once a week; stop if your voice feels strained.'] : ['Short, regular sessions beat one long one.', 'Write original lines. Imitating a technique is fine; copying lines is not.'] };
+}
+
+// ===== content.js : bots, lessons, quiz banks, knowledge base, safety text =====
+// Written by hand for this tool. No lyrics are quoted. Style notes are general characterisations, not claims about specific songs.
+const BOTS = {
+  singer: {
+    id: 'singer', name: 'SingerFlow', emoji: '🎤',
+    tagline: 'Healthy-voice training for young singers',
+    intro: "Hi, I'm SingerFlow. I'm a rule-based coach that runs entirely on your device: no internet, no AI model behind me. I can teach lessons, quiz you, build a warm-up and practice plan, break words into consonants, build runs, and track your progress. Type \"help\" to see what I can do.",
+    about: 'SingerFlow is a rule-based training tool: keyword matching, a hand-written knowledge base and small calculators. It has no neural network and no API. Pitch and formant tools (mic) only work if your browser allows the microphone. It is not a medical or voice-teacher substitute. Gospel and other style notes are general craft ideas; nothing here clones or imitates a real person\'s voice.',
+    levels: ['Foundations', 'Technique', 'Craft', 'Performance'],
+    chips: ['help', 'lesson 1', 'quiz me', 'warm up', 'practice plan 20', 'run', 'safety']
+  },
+  rapper: {
+    id: 'rapper', name: 'BiggieFlow', emoji: '🎧',
+    tagline: 'Flow, rhyme and writing for young artists',
+    intro: "Yo, I'm BiggieFlow, a rule-based flow coach that runs entirely on your device: no internet, no AI model. I'm an independent study tool inspired by the storytelling and rhyme craft of 1990s New York rap. I'm not affiliated with the Notorious B.I.G. or his estate, I don't speak as him, and I won't reproduce his lyrics. Paste 4 bars and I'll break down the flow. Type \"help\" to see everything.",
+    about: 'BiggieFlow is a rule-based training tool: keyword matching, hand-written lessons and spelling-based rhyme and stress heuristics. No neural network, no API. Its rhyme, stress and flow-grid analysis is an estimate from spelling, not from audio; it can be wrong, especially on names, slang and unusual words. It is unaffiliated with the Notorious B.I.G. or his estate and does not reproduce or imitate any real artist\'s voice or lyrics. His catalogue contains explicit material; this tool teaches craft and keeps its own content clean.',
+    levels: ['Foundations', 'Rhyme craft', 'Writing craft', 'Performance'],
+    chips: ['help', 'lesson 1', 'quiz me', 'rhyme time', 'bar timer 90', 'freestyle prompt', 'practice plan 20']
+  }
+};
+
+const LESSONS = { singer: [], rapper: [] };
+function L(bot, level, title, goal, body, drill, quiz) { LESSONS[bot].push({ id: bot[0] + (LESSONS[bot].length + 1), n: LESSONS[bot].length + 1, level, title, goal, body, drill, quiz }); }
+
+// ---------------- SINGER ----------------
+L('singer', 1, 'Posture and easy breath', 'Breathe low and quietly, sing without tension.',
+  ['Stand with feet about hip-width apart, knees soft, shoulders loose and chin level. A tall but relaxed body gives the breath room to move.',
+   'Breathe in quietly through the nose or the corners of the mouth. Let the belly and the lower ribs widen a little instead of lifting the shoulders. You do not need a huge breath; you need an easy, quiet one.',
+   'Let the air out slowly and steadily. A good test is a steady "sss": try to keep it even for 10 seconds, then 15, without squeezing.'],
+  ['Hand on belly: breathe in for 4 counts, feel it widen, then out on "sss" for 6. Repeat 5 times.', 'Shoulder check in a mirror: they should not rise on the inhale.', 'Count how long you can hold a quiet "sss". Write it down and compare next week.'],
+  [{ q: 'On the inhale, what should you notice?', o: ['Shoulders lifting high', 'Belly and lower ribs widening a little', 'Chest puffed out and held', 'A loud gasp'], a: 1, why: 'A quiet, low breath keeps the neck and shoulders free.' },
+   { q: 'What does a steady "sss" help you check?', o: ['Pitch accuracy', 'Breath control', 'Vibrato speed', 'Vowel colour'], a: 1, why: 'It is a simple way to hear whether the air flow is even.' }]);
+L('singer', 1, 'Your comfortable range (and changing voices)', 'Find the notes that feel easy today and sing within them.',
+  ['Your range is the span from your lowest to highest comfortable note. It grows slowly with healthy practice; it does not grow by forcing.',
+   'Voices change during puberty. Cracks, flips and sudden changes in the lowest and highest notes are normal for many young singers. Do not force notes, and do not copy a singer\'s sound that sits far outside your own voice.',
+   'Find your "home" notes: slide gently up on "ng" or a hum and notice where it feels free. Practise mostly in the middle; visit the edges briefly and quietly.'],
+  ['Slide a gentle "ng" up from a low comfortable note until it starts to feel effortful. Stop one or two notes before that. That is today\'s top.', 'Do the same downward.', 'Write both notes down; they can change day to day.'],
+  [{ q: 'Voice cracks during puberty are…', o: ['A sign you are singing wrong and should stop forever', 'Common and normal; avoid forcing', 'Fixed by singing louder', 'Only a problem for girls'], a: 1, why: 'The voice is changing; gentle, easy singing is the way through.' },
+   { q: 'Where should most practice happen?', o: ['At the very top of your range', 'In the comfortable middle', 'Only on the lowest notes', 'Wherever the singer you copy sings'], a: 1, why: 'Visit the edges briefly; live in the middle.' }]);
+L('singer', 1, 'Matching pitch', 'Hear a note, sing it, and judge how close you are.',
+  ['Pitch matching is a listening skill first. Hum the note softly; if you can hear it in your head before you sing it, you will hit it more often.',
+   'Cents measure how far you are from a note: 100 cents is one semitone (one piano key). Being within about 20 cents sounds in tune to most listeners; singers drift a little all the time.',
+   'Use a piano, a drone or the tuner tool. Aim first for the middle of the note, then hold it steady for 3 seconds without wobbling.'],
+  ['Play one note. Hum it back, then open to "ah". Check with the tuner if you have a mic.', 'Try two notes: one, then the next one up. Repeat slowly.', 'Close your eyes and sing the note first, then check yourself.'],
+  [{ q: 'How many cents are in one semitone?', o: ['10', '50', '100', '1200'], a: 2, why: '100 cents = 1 semitone; 1200 cents = 1 octave.' },
+   { q: 'Before singing a target note, a good first step is…', o: ['Singing louder', 'Hearing it in your head or humming it softly', 'Holding your breath', 'Sliding from far above'], a: 1, why: 'Audiate first (hear it internally), then sing.' }]);
+L('singer', 2, 'Vowels: the five shapes', 'Keep vowels pure and consistent across notes.',
+  ['Singing is mostly vowels. A held note is a vowel. Practise ee, eh, ah, oh, oo with a loose jaw and a relaxed tongue, changing only the mouth and tongue shape, not the pitch.',
+   'Each vowel has resonances called formants (F1 and F2), which are why "ee" and "ah" sound different even on the same note. Roughly, F1 rises as the mouth opens and F2 rises as the tongue moves forward. The formant tool can show these, but it works best on low-to-mid pitches and is only an estimate.',
+   'On higher notes, many singers modify vowels a little (for example "ee" slightly more open) to keep tone free. A teacher can show you how. Do not push to keep a vowel exact if it makes you strain.'],
+  ['On one comfortable pitch: ee - eh - ah - oh - oo, one beat each, no pitch change.', 'Sing the same pattern one step higher; notice if any vowel tightens.', 'Mirror check: jaw drops straight down on "ah", lips round on "oo".'],
+  [{ q: 'Which part of a sung word do you usually hold?', o: ['The first consonant', 'The vowel', 'The last consonant', 'The silent letter'], a: 1, why: 'Sustained sound is the vowel.' },
+   { q: 'What do formants (F1, F2) explain?', o: ['Why vowels sound different', 'How loud you are', 'Your tempo', 'Where to breathe'], a: 0, why: 'Vowel colour comes from resonances of the vocal tract.' }]);
+L('singer', 2, 'Consonants that carry the words', 'Make words clear without disturbing the tone.',
+  ['Consonants give words their shape. Plosives (p b t d k g) are quick bursts, fricatives (f v s z sh th) are air noise, nasals (m n ng) hum through the nose, liquids (l r) and glides (w y) are almost vowels.',
+   'Voiced consonants (b d g v z m n) add a buzz; unvoiced ones (p t k f s sh) are just air. Unvoiced consonants have no pitch, so begin them slightly before the beat and have the vowel land on the beat.',
+   'Nasals and liquids are good places to keep tone going. End hard consonants cleanly and short so held vowels stay clear.'],
+  ['Say the word "beautiful" slowly and mark the consonants. Sing it on one note, landing the vowel on the beat.', 'Sing "mah-nah-lah" on one pitch, keeping the tone smooth.', 'Use the consonant coach: type three words from a song you are working on.'],
+  [{ q: 'Which is an unvoiced consonant?', o: ['b', 'v', 's', 'm'], a: 2, why: '"s" is air only; b, v, m add voice.' },
+   { q: 'To keep a beat clean, an unvoiced start like "s" should…', o: ['Land exactly on the beat', 'Start slightly before the beat so the vowel lands on it', 'Be as long as possible', 'Be skipped'], a: 1, why: 'Lead the consonant; land the vowel.' }]);
+L('singer', 2, 'Intervals and scales', 'Recognise common distances between notes and sing simple scales.',
+  ['An interval is the distance between two notes. A major scale (do re mi fa sol la ti do) goes up by whole steps except between 3-4 and 7-8, which are half steps.',
+   'The major pentatonic scale uses five notes (1 2 3 5 6) and is easy to sing in tune; the minor pentatonic (1 b3 4 5 b7) and the blues scale (add a b5) are common in gospel, soul and pop.',
+   'Memorise interval sounds with songs you know. A perfect fifth is seven semitones; an octave is twelve.'],
+  ['Sing a major scale up and down slowly with solfege.', 'Sing a 5-note major pentatonic: 1 2 3 5 6, then back.', 'Use the ear trainer: three intervals a day, starting with fifths and octaves.'],
+  [{ q: 'How many semitones are in a perfect fifth?', o: ['5', '7', '9', '12'], a: 1, why: 'C to G is 7 semitones.' },
+   { q: 'Which scale has five notes?', o: ['Major', 'Blues (six)', 'Pentatonic', 'Chromatic'], a: 2, why: 'Penta means five.' }]);
+L('singer', 3, 'Phrasing and dynamics', 'Shape a line instead of singing note-by-note.',
+  ['A phrase is a musical sentence. Decide where each phrase begins, where it leads (usually one important word), and where you will breathe. Mark breaths in pencil on your lyric sheet.',
+   'Dynamics are changes in loudness. Start phrases a little softer and grow into the key word. You do not need to be loud to be powerful; contrast does most of the work.',
+   'Speak the lyric as if telling a friend. Then sing it with the same meaning. Meaning shapes phrasing better than technique does.'],
+  ['Pick 4 lines of a song. Speak them with feeling, then sing them with the same emphasis.', 'Mark breath places and the "peak" word of each phrase.', 'Sing it once soft-to-loud and once even; record both and compare.'],
+  [{ q: 'Dynamics are changes in…', o: ['Pitch', 'Loudness', 'Key', 'Word order'], a: 1, why: 'Dynamics = volume.' },
+   { q: 'A good way to find phrasing is to…', o: ['Sing as fast as possible', 'Speak the lyric with meaning first', 'Remove all breaths', 'Hold every note equally'], a: 1, why: 'Meaning guides emphasis and breath.' }]);
+L('singer', 3, 'Gospel-style runs and ornaments', 'Build a short, clean run that lands on a held note.',
+  ['A run is a quick stepwise group of notes decorating a longer note. Gospel and soul singers use them for emphasis. Mahalia Jackson, a gospel pioneer often called the Queen of Gospel, is a famous reference for powerful, church-rooted phrasing: repeating a phrase, building intensity, and holding key words. Use her as a listening reference for craft ideas, not as a voice to imitate.',
+   'Start with 4 notes of a pentatonic scale, one note per beat, on a single vowel. Slow it down until each note is clean, then add speed. A run should lead to a held target note.',
+   'Keep it within an octave and well inside your comfortable range. If your throat tightens, stop and go back to slower, quieter versions.'],
+  ['Use the run builder: level 1, ascending. Sing it at 60 beats per minute with one note per beat.', 'Play it back at 90, then 120 only when clean.', 'Write your own 4-note run and sing it into a held word.'],
+  [{ q: 'A run should…', o: ['Be as fast and high as possible', 'Lead clearly to a held note, and stay comfortable', 'Replace the melody entirely', 'Ignore the key'], a: 1, why: 'Runs are decoration; clarity and comfort come first.' },
+   { q: 'What is the best way to learn a run?', o: ['At full speed immediately', 'Slowly on one vowel, then speed up gradually', 'Whisper it', 'Skip warm-ups'], a: 1, why: 'Accuracy first, speed later.' }]);
+L('singer', 3, 'Vibrato and tone', 'Let a natural vibrato appear; do not force it.',
+  ['Vibrato is a gentle wobble in pitch (and a bit of loudness) on held notes. It usually appears naturally when the voice is relaxed and supported. Forcing or shaking the jaw or throat to make it will cause tension.',
+   'Practise straight tone first (a steady note with no wobble), then let the note relax. Many young voices do not have a steady vibrato yet, and that is normal.',
+   'Tone also comes from relaxed jaw, space in the mouth and clear vowels. Brightness and darkness are matters of taste; keep it easy.'],
+  ['Hold a comfortable note straight for 4 counts.', 'Hold it again and relax; listen for a gentle movement without pushing it.', 'Record both and compare.'],
+  [{ q: 'The safest way to get vibrato is to…', o: ['Shake your jaw', 'Relax and let it develop', 'Squeeze the throat', 'Sing louder'], a: 1, why: 'Vibrato is a by-product of relaxed, supported singing.' },
+   { q: 'Straight tone means…', o: ['No vibrato', 'Very loud', 'Very high', 'Whispered'], a: 0, why: 'A steady pitch with little or no wobble.' }]);
+L('singer', 4, 'Microphone technique and recording', 'Use a mic so you do not have to push your voice.',
+  ['A microphone lets you stay soft. Hold or stand about a fist (10 to 15 cm) from it, a little off to the side to soften "p" and "b" pops. Move slightly away on loud notes and closer on soft ones.',
+   'When recording, listen with headphones at a low volume. Record short takes, listen back, and take notes. Your voice sounds different to you than to others, and recordings are the honest mirror.',
+   'Do not sing over loud music or shout over a crowd; ask for a better monitor or lower the backing track.'],
+  ['Record the same phrase at three distances. Which sounds best?', 'Record a "p" word on and off axis; listen for pops.', 'Keep one take a week as a progress diary.'],
+  [{ q: 'A good starting mic distance is about…', o: ['Touching the mic', 'A fist (10-15 cm)', 'Across the room', '2 metres'], a: 1, why: 'Close enough for tone, far enough to avoid pops.' },
+   { q: 'In a loud room you should…', o: ['Shout', 'Ask for better monitoring or a lower backing track', 'Whisper', 'Clear your throat repeatedly'], a: 1, why: 'Fix the sound around you, not by straining.' }]);
+L('singer', 4, 'Performance and nerves', 'Turn nerves into energy and prepare calmly.',
+  ['Nerves are common and are not a sign you will do badly. Your body is getting ready. Slow breaths and a clear plan help.',
+   'Prepare in layers: know the words, know the melody, then practise the performance (standing, with a mic, in front of someone). Run the opening 8 bars many times so the first moments feel familiar.',
+   'The night before, keep it light: gentle warm-up, water, sleep. On the day, warm up, sip water, and choose one thing to focus on, such as the meaning of the first line.'],
+  ['Perform for one trusted person, then two.', 'Breathe in 4, out 6 for one minute before you start.', 'Write a three-line checklist (words, first note, breath) and read it before every run.'],
+  [{ q: 'Which preparation is best the night before?', o: ['A long hard rehearsal', 'Light review, gentle warm-up, water, sleep', 'Shouting practice', 'No water'], a: 1, why: 'Rested voices perform better.' },
+   { q: 'Nerves are…', o: ['Always bad', 'Normal and manageable', 'Rare', 'Proof you are unprepared'], a: 1, why: 'Almost all performers feel them.' }]);
+L('singer', 4, 'A sustainable routine and vocal health', 'Build a plan that grows your voice and protects it.',
+  ['Short, regular sessions beat rare marathons. Fifteen to thirty focused minutes most days, with at least one rest day, is a good pattern for many young singers; ask your teacher what suits you.',
+   'Vocal hygiene: drink water through the day, do not shout or whisper hard, avoid repeated throat clearing, rest when tired, avoid smoke, and sleep well. See a doctor for hoarseness lasting over about two weeks, pain, or trouble swallowing or breathing.',
+   'Track progress weekly: range notes, steady-"sss" seconds, favourite recording, one goal. Celebrate small wins.'],
+  ['Write a 5-day plan with one rest day.', 'Set one goal for this month (for example a clean 4-note run).', 'Run the warm-up builder and save it.'],
+  [{ q: 'Hoarseness lasting more than about two weeks means…', o: ['Sing harder', 'See a doctor', 'Whisper', 'Ignore it'], a: 1, why: 'Persistent hoarseness needs a medical check.' },
+   { q: 'A good practice pattern is…', o: ['One 4-hour session a month', 'Short regular sessions with rest days', 'Only before performances', 'Nonstop'], a: 1, why: 'Consistency and recovery.' }]);
+
+// ---------------- RAPPER ----------------
+L('rapper', 1, 'Counting bars and the beat', 'Count 4/4 and know where the bar starts.',
+  ['Most rap sits on 4/4: four beats per bar, counted 1-2-3-4. A verse is often 16 bars, a hook often 4 or 8. Count out loud over a beat until you can feel when the bar restarts.',
+   'Each beat splits into four 16th notes: 1 e & a. A bar is 16 slots. Syllables you say sit in those slots. Beats 2 and 4 are the backbeat (usually the snare).',
+   'Use the metronome: pick 80 to 95 beats per minute, count "1 2 3 4" for four bars, then speak any sentence once per bar.'],
+  ['Count bars to 16 without losing track, at 85 bpm.', 'Say your name and one other word per beat, steady.', 'Clap the backbeat (2 and 4) while counting.'],
+  [{ q: 'How many 16th-note slots are in one 4/4 bar?', o: ['4', '8', '16', '32'], a: 2, why: '4 beats x 4 sixteenths = 16.' },
+   { q: 'Which beats are the backbeat?', o: ['1 and 3', '2 and 4', 'Only 1', 'All of them'], a: 1, why: 'The snare usually lands on 2 and 4.' }]);
+L('rapper', 1, 'Syllables and stress', 'See where stressed syllables land in the bar.',
+  ['A syllable is one beat of sound: "flow" is 1, "rhythm" is 2, "melody" is 3. Stress is the louder, longer syllable in a word: RHY-thm, MEL-o-dy, be-LIEVE.',
+   'Rap sounds smooth when stressed syllables land on strong spots (the beats or the offbeats) and unstressed ones fill in around them. When a stressed syllable lands somewhere awkward, the line feels clumsy.',
+   'Use the flow grid: it places your syllables in 16 slots and marks stressed ones with X. It is a spelling-based estimate, so say the line out loud to confirm.'],
+  ['Write one line and underline stressed syllables.', 'Paste it into the flow grid. Where does the grid put the stress?', 'Rewrite one word so a stressed syllable lands on beat 3.'],
+  [{ q: 'How many syllables are in "melody"?', o: ['2', '3', '4', '5'], a: 1, why: 'mel-o-dy.' },
+   { q: 'Smooth flow usually means…', o: ['Stressed syllables land on strong spots', 'All words are the same length', 'No rests', 'Every line is 20 syllables'], a: 0, why: 'Stress and rhythm should line up.' }]);
+L('rapper', 1, 'Breath and clear delivery', 'Breathe in the gaps and make every word understandable.',
+  ['Breath is part of the rhythm. Plan your breath at the end of a bar or a line, a quick low breath through the nose or mouth, not a gasp. Mark breath spots on your page.',
+   'Clear speech wins. Open your mouth, shape consonants, and slow down until every word is crisp, then speed up. Fast and mumbled loses to medium and clear.',
+   'Practise tongue twisters slowly first. Accuracy before speed.'],
+  ['Read a verse and mark a breath at the end of every second bar.', 'Say a tongue twister at half speed 3 times, then normal speed once.', 'Record one bar; can a friend write down every word?'],
+  [{ q: 'The best place to breathe is usually…', o: ['In the middle of a word', 'At the end of a bar or line', 'Never', 'On every beat'], a: 1, why: 'Planned breath at natural gaps.' },
+   { q: 'For fast rap, you should first…', o: ['Mumble', 'Make it clear slowly, then speed up', 'Shout', 'Skip consonants'], a: 1, why: 'Clear first, fast later.' }]);
+L('rapper', 2, 'Rhyme types', 'Tell perfect, slant, and multisyllabic rhymes apart.',
+  ['Perfect rhyme: same vowel and ending sounds (flow / know, night / light). Slant (near) rhyme: similar but not identical (home / stone, time / mind). Using only perfect rhymes can sound sing-song; slant rhymes give you more words and more surprise.',
+   'Multisyllabic rhyme matches several syllables in a row, usually the vowel sounds ("the kind of" / "I find a"). Match the vowels from the end backward: more matches = denser rhyme.',
+   'End rhyme is at the ends of lines. Internal rhyme sits inside a line. Both can be used together.'],
+  ['Pick a word and list 10 perfect and 5 slant rhymes (use the rhyme lab to check).', 'Write a 2-line couplet with a slant rhyme.', 'Write one 2-syllable multi rhyme.'],
+  [{ q: 'Which pair is a slant rhyme?', o: ['cat / hat', 'time / mind', 'flow / know', 'night / light'], a: 1, why: 'Similar vowel, different ending consonants.' },
+   { q: 'A multisyllabic rhyme matches…', o: ['Only the last letter', 'Several syllables, mostly the vowel sounds', 'The first word', 'Nothing'], a: 1, why: 'Matching from the end backward through several vowels.' }]);
+L('rapper', 2, 'Internal rhyme and rhyme families', 'Chain rhymes inside bars and across a verse.',
+  ['Pick one rhyme family for a verse (for example the "-ine" sound: mine, line, shine, design). Build a list before you write, so you have words ready.',
+   'Internal rhyme: put a word in the middle of the line that rhymes with the end ("I rise with the skies"). Chain rhymes inside several bars and the verse sounds woven together.',
+   'Mix rhyme families so the verse does not feel stuck: do four bars in one family, then switch.'],
+  ['Choose an ending sound and brainstorm 12 words for it.', 'Write 4 bars; each must have an internal rhyme.', 'Check with the verse analyzer to see the scheme letters.'],
+  [{ q: 'An internal rhyme is…', o: ['Rhyme at line ends only', 'A rhyme inside a line', 'A silent line', 'The title'], a: 1, why: 'Inside the bar, not only at the end.' },
+   { q: 'Why build a rhyme list first?', o: ['It is required', 'Words are ready when you write or freestyle', 'It makes lines shorter', 'It is not helpful'], a: 1, why: 'Having options keeps you in flow.' }]);
+L('rapper', 2, 'The pocket: on, ahead, behind', 'Choose where your words sit relative to the beat.',
+  ['The pocket is where your delivery settles relative to the beat. On the beat is tight and punchy. Ahead pushes energy. Behind, a laid-back feel where syllables land slightly after the beat, sounds relaxed. Critics often describe a relaxed, behind-the-beat feel as a mark of some classic 1990s New York rappers; treat that as a listening tip, not a claim about any one song.',
+   'A pickup is a word or two before beat 1 that leads into the bar. Placing the first stressed word on beat 1 or 3 often helps lines feel anchored.',
+   'Swing delays the off-beat 16th notes slightly, making a groove bounce. The metronome has a swing setting so you can feel the difference.'],
+  ['Say a line straight on the beat, then half a 16th behind, then ahead. Which feels best?', 'Add a one-word pickup before beat 1.', 'Turn swing on in the metronome and repeat.'],
+  [{ q: 'A pickup is…', o: ['A word or two before beat 1', 'A kind of beat', 'The chorus', 'A silent bar'], a: 0, why: 'It leads into the bar.' },
+   { q: 'Behind-the-beat delivery tends to feel…', o: ['Rushed', 'Relaxed', 'Silent', 'Out of key'], a: 1, why: 'Slightly late syllables give a laid-back feel.' }]);
+L('rapper', 3, 'Imagery and storytelling', 'Show a scene instead of listing facts.',
+  ['A story needs a setup (who and where), a problem or turn, and a landing. Even 8 bars can do this. Specific details make it real: the colour of a jacket, a sound at the window.',
+   'Show, do not tell: not "I was nervous" but "my hands would not stay still". Use the five senses.',
+   'Keep it original and age-appropriate. Write about your own life, imagination and community. Describing real hardship honestly does not require graphic or explicit content.'],
+  ['Write 4 bars of setup, 4 bars of turn, 4 bars of landing.', 'Underline every concrete detail; add two more.', 'Read it aloud: does a listener see the scene?'],
+  [{ q: 'A story in rap needs at least…', o: ['Setup, turn and landing', 'Only a hook', 'Only rhymes', 'Swear words'], a: 0, why: 'A simple arc keeps listeners with you.' },
+   { q: '"Show, do not tell" means…', o: ['Use concrete details', 'Use more adjectives like "very"', 'Skip the story', 'Repeat the title'], a: 0, why: 'Details make the scene vivid.' }]);
+L('rapper', 3, 'Wordplay and punchlines', 'Land a clever line with a twist at the end.',
+  ['A punchline sets a expectation and then twists it. Put the twist word at the end of the bar so the rhyme lands on it.',
+   'Double meanings, metaphors and similes all help. Try "Thing A is like thing B because…" and write the surprising "because".',
+   'Keep it kind and clever. The best punchlines punch up or at yourself, not down at people.'],
+  ['Pick a word with two meanings and write one line that uses both.', 'Write a simile with a surprising "because".', 'Put the twist in the final word and check it rhymes.'],
+  [{ q: 'Where does a punchline usually go?', o: ['At the end of the bar', 'In the title', 'Before the beat starts', 'It cannot be placed'], a: 0, why: 'The end gets the rhyme and the last impression.' },
+   { q: 'A double meaning is…', o: ['A word with two meanings used on purpose', 'Two beats', 'A repeat', 'A rest'], a: 0, why: 'A pun or layered meaning.' }]);
+L('rapper', 3, 'Flow switches and rests', 'Vary your rhythm so the verse stays interesting.',
+  ['Flow is the rhythmic pattern of your syllables. Changing it, for example from steady to double-time (twice as many syllables) or adding a pause, keeps the listener awake.',
+   'Rests are part of the flow. A one-beat silence before a punchline gives it room. Do not fill every slot.',
+   'Mark your verse: where does it speed up, slow down, rest? Aim for at least one change every 4 or 8 bars.'],
+  ['Write one line with 6 syllables and one with 14, then say both in the same bar.', 'Add a pause before the last word of a bar.', 'Analyze with the flow grid and look at the density labels.'],
+  [{ q: 'Double-time means…', o: ['Twice as many syllables in the same time', 'Half the beats', 'Doubling the song length', 'Two choruses'], a: 0, why: 'Same bar, twice as dense.' },
+   { q: 'Rests help because…', o: ['They give lines room to land', 'They are required', 'They add syllables', 'They break rhymes'], a: 0, why: 'Silence frames the line.' }]);
+L('rapper', 4, 'Writing a full 16-bar verse', 'Plan and write a complete verse.',
+  ['Plan first: topic, three images, one rhyme family per four bars, and an ending line that lands the idea. Write in 4-bar blocks.',
+   'Read each block aloud over a beat before moving on. Fix breath, clarity and stress as you go.',
+   'Then do a clean-up pass: cut filler, strengthen verbs, check that every bar earns its place.'],
+  ['Choose a topic and write the plan in 5 bullets.', 'Write bars 1-4, test, then 5-8, and so on.', 'Final pass: cut 10 percent.'],
+  [{ q: 'A good first step is…', o: ['Plan topic and images', 'Record immediately', 'Copy another verse', 'Skip rhyme'], a: 0, why: 'Planning prevents rambling.' },
+   { q: 'Writing in 4-bar blocks helps you…', o: ['Test as you go', 'Avoid rhyme', 'Write less', 'Skip breath'], a: 0, why: 'Short loops make it easy to fix.' }]);
+L('rapper', 4, 'Freestyle skills', 'Keep going without stopping, using prepared tools.',
+  ['Freestyle is mostly preparation: lists of rhyme families, images and themes ready in your head. Look ahead; pick your next rhyme word while saying the current line.',
+   'If you blank, repeat a phrase, describe what you see, or use a filler that fits the beat. Keep the beat going; the audience forgives a pause more than a stop.',
+   'Practise with the prompter: random words every 4 bars.'],
+  ['Freestyle 2 bars on one prompt word.', 'Add a second word every 4 bars.', 'Record and listen back; note one thing to fix.'],
+  [{ q: 'The best freestyle prep is…', o: ['Rhyme families and images ready', 'Memorising other rappers', 'Silence', 'Louder volume'], a: 0, why: 'Prepared tools make improvisation easier.' },
+   { q: 'If you blank, you should…', o: ['Stop', 'Repeat or describe what you see, keep the beat', 'Leave', 'Shout'], a: 1, why: 'Keep the groove going.' }]);
+L('rapper', 4, 'Recording, performing and staying original', 'Perform with confidence and respect other artists.',
+  ['Mic basics: a fist away, slightly off-axis to soften pops, record short takes and listen back. Do not shout; it strains the voice. Drink water.',
+   'Originality: learning from a technique (a rhyme pattern, a flow) is fine. Copying someone\'s lyrics, flow note-for-note, or voice and presenting it as yours is not. Sampling or covering needs permission. Cloning a real person\'s voice needs that person\'s consent.',
+   'Keep it clean and kind for school and young audiences. Share work with a trusted adult or mentor for feedback.'],
+  ['Record one verse, three takes, pick the best.', 'List three techniques you borrowed and how you made them your own.', 'Share with a trusted person and ask for one suggestion.'],
+  [{ q: 'Is copying a rapper\'s lyrics and calling them yours okay?', o: ['Yes', 'No, learn techniques but write your own', 'Only if it rhymes', 'Only on weekdays'], a: 1, why: 'Copying lyrics is plagiarism and may infringe copyright.' },
+   { q: 'Cloning a real person\'s voice requires…', o: ['Nothing', 'Their consent', 'A fast computer', 'A microphone'], a: 1, why: 'Consent is essential; some people (for example the deceased) cannot give it.' }]);
+
+// ---------------- extra quiz bank ----------------
+const QBANK = {
+  singer: [
+    { q: 'Which is a safe response to feeling pain while singing?', o: ['Push through', 'Stop and rest', 'Sing louder', 'Whisper hard'], a: 1, why: 'Pain is a stop signal.' },
+    { q: 'How many semitones are in an octave?', o: ['7', '10', '12', '24'], a: 2, why: '12 semitones.' },
+    { q: 'Lip trills are mainly used to…', o: ['Warm up gently with easy airflow', 'Sing high notes loudly', 'Clean the mic', 'Learn lyrics'], a: 0, why: 'They are gentle, low-effort warm-ups.' },
+    { q: 'Hydration is best…', o: ['All day', 'Only just before singing', 'Never', 'Only coffee'], a: 0, why: 'Steady sips through the day.' },
+    { q: 'Whispering hard is generally…', o: ['Good for the voice', 'Often harder on the voice than soft speech', 'A warm-up', 'Required'], a: 1, why: 'Strained whispering can irritate the voice.' }
+  ],
+  rapper: [
+    { q: 'Which word best rhymes (perfect) with "flow"?', o: ['now', 'know', 'few', 'low-key'], a: 1, why: 'flow / know share the same vowel and ending.' },
+    { q: 'How many beats in a 4/4 bar?', o: ['2', '3', '4', '8'], a: 2, why: 'Four.' },
+    { q: 'A hook is usually…', o: ['A repeated catchy section', 'A beat', 'A rest', 'A mic'], a: 0, why: 'The memorable repeated part.' },
+    { q: 'Scheme "AABB" means…', o: ['Lines 1-2 rhyme and lines 3-4 rhyme', 'All lines rhyme', 'No rhymes', 'Lines 1 and 3 rhyme'], a: 0, why: 'Couplets.' },
+    { q: 'Clear delivery comes from…', o: ['Shaping consonants and slowing down first', 'Mumbling', 'Shouting', 'Skipping words'], a: 0, why: 'Clarity first, speed later.' }
+  ]
+};
+
+// ---------------- knowledge base ----------------
+// k: keyword string (stems matched loosely); a: answer; next: suggested follow-ups
+const KB = {
+  shared: [
+    { id: 'greet', k: 'hello hi hey yo sup howdy', a: null, special: 'greet' },
+    { id: 'thanks', k: 'thanks thank cheers appreciate', a: "You're welcome! Want to try a quick drill or a quiz?" },
+    { id: 'who', k: 'who are you what are you ai bot robot real person neural', a: 'I am a rule-based practice coach. I match your words against a hand-written knowledge base and run small calculators. I have no internet connection and no AI model inside me, so I can be wrong or miss a question. Type "help" to see what I can do.' },
+    { id: 'offline', k: 'offline internet api wifi online server cloud', a: 'Everything runs on your device. I do not call any API or send what you type anywhere. (If a tool needs your microphone, that is handled by your browser and stays local.)' },
+    { id: 'sleep', k: 'sleep rest recover tired', a: 'Rest is training. Sleep well, take at least one rest day a week, and stop when your voice or body is tired.' },
+    { id: 'goal', k: 'goal goals motivation motivated improve progress better', a: 'Pick one small goal for this week, practise a little every day, and record yourself once a week. Progress shows in the recordings. Try "practice plan 20".' },
+    { id: 'age', k: 'age young kid teen teenager parent teacher adult', a: 'This tool is made for young artists. Ask a trusted adult, teacher or coach to practise with you, and always tell them if something hurts or worries you.' },
+    { id: 'copyright', k: 'copyright plagiarism steal copy copying original sample cover permission', a: 'Learn from techniques, write your own words. Copying lyrics or a melody note-for-note and calling it yours is plagiarism and can break copyright. Samples and covers need permission. And never imitate or clone a real person\'s voice without their consent.' },
+    { id: 'clean', k: 'clean explicit swear curse profanity inappropriate', a: 'I keep my own examples clean and kid-friendly. You can write about real life honestly without graphic or explicit content; strong writing is specific, not shocking.' }
+  ],
+  singer: [
+    { id: 's-breath', k: 'breath breathe breathing diaphragm support air belly inhale exhale', a: 'Breathe in quietly and low: belly and lower ribs widen a little, shoulders stay down. Let the air out slowly and steadily. Test with a quiet "sss": aim for an even 10 to 15 seconds. Try the breath timer.', next: ['lesson 1', 'breath timer'] },
+    { id: 's-warm', k: 'warm warmup warm-up exercises routine before', a: 'A short warm-up: easy breath, gentle sighs, lip trills, a straw hum or "ng" slides, then five-note scales on "no". Say "warm up 8" for an 8-minute routine.', next: ['warm up 8'] },
+    { id: 's-range', k: 'range high low notes octave extend higher belt', a: 'Range grows slowly when you stay in the comfortable middle and visit the edges briefly and quietly. Do not push or shout to reach higher; that can hurt your voice. A voice teacher can guide safe range-building.', next: ['lesson 2'] },
+    { id: 's-crack', k: 'crack cracking break breaking flip voice change puberty squeak', a: 'Cracks and flips are common, especially during puberty. Sing lightly, stay in comfortable notes, do not force, and keep practising. If your voice is hoarse or painful, rest and talk to a doctor or teacher.', next: ['safety'] },
+    { id: 's-pitch', k: 'pitch tune tuning flat sharp off-key offkey intonation cents', a: 'Hear the note in your head first, hum it, then open to a vowel. Flat means a little under the note; sharp is over. Within about 20 cents sounds in tune. Use the tuner tool with a mic, or sing against a piano or drone.', next: ['lesson 3', 'interval'] },
+    { id: 's-vowel', k: 'vowel vowels formant formants f1 f2 resonance ee ah oo mouth', a: 'Vowels carry the sound. Practise ee, eh, ah, oh, oo on one pitch with a loose jaw. Formants (F1, F2) are resonances that make vowels sound different; the formant tool estimates them but is accurate mostly on low-to-mid pitches.', next: ['lesson 4'] },
+    { id: 's-cons', k: 'consonant consonants diction articulate articulation words clear plosive fricative nasal', a: 'Lead unvoiced consonants (p t k s sh) slightly before the beat so the vowel lands on time; keep nasals (m n ng) for holding; end hard consonants short. Try "consonant beautiful".', next: ['lesson 5', 'consonant love'] },
+    { id: 's-run', k: 'runs run riff riffs melisma ornament gospel agility fast', a: 'A run is a quick stepwise group of notes that leads to a held note. Start with 4 pentatonic notes, one per beat, on one vowel. Slow first, speed later, and stay inside your comfortable range. Say "run" for a new one to practise.', next: ['run', 'lesson 8'] },
+    { id: 's-gospel', k: 'gospel mahalia jackson church soul spiritual style queen', a: 'Mahalia Jackson is a famous gospel pioneer, often called the Queen of Gospel, known for a powerful contralto and church-rooted phrasing (repetition, build, call and response). She is a listening reference for craft ideas. I do not imitate or clone her voice; build your own sound.', next: ['lesson 8'] },
+    { id: 's-vibrato', k: 'vibrato wobble shake tremolo straight tone', a: 'Vibrato appears on its own when you are relaxed and supported. Do not shake your jaw or squeeze your throat to make it. Practise straight tone, then relax and let it develop.', next: ['lesson 9'] },
+    { id: 's-mic', k: 'mic microphone record recording headphones pop distance', a: 'Keep the mic a fist away, slightly off to the side to soften "p" and "b". Record short takes, listen with headphones at low volume, and compare weekly.', next: ['lesson 10'] },
+    { id: 's-nerves', k: 'nervous nerves anxiety stage fright scared performance perform audition', a: 'Nerves are normal. Breathe in 4, out 6 for a minute, know your first line and first note, and run the opening many times. Focus on the meaning of the first line instead of on being perfect.', next: ['lesson 11'] },
+    { id: 's-hoarse', k: 'hoarse hoarseness lost losing sore scratchy throat pain hurts hurt cough', a: 'Stop singing and rest your voice. Sip water; avoid throat clearing and whispering. If you have pain, trouble swallowing or breathing, or hoarseness for more than about two weeks, see a doctor (an ENT or voice specialist). I am not a medical tool.', next: ['safety'], safety: true },
+    { id: 's-water', k: 'water hydration drink tea honey coffee dairy', a: 'Sip water through the day, not only just before singing. Limit caffeine. Warm drinks can feel nice; there is no magic drink that fixes strain, rest does.', next: ['safety'] },
+    { id: 's-practice', k: 'practice practise schedule daily often long how-often', a: 'Short, regular sessions: 15 to 30 focused minutes most days, with one rest day. Say "practice plan 20" for a plan.', next: ['practice plan 20'] },
+    { id: 's-posture', k: 'posture stand standing sit sitting shoulders neck jaw tension relax', a: 'Feet hip-width, knees soft, shoulders loose, chin level, jaw relaxed. Check for tension in the neck and jaw before each song.', next: ['lesson 1'] },
+    { id: 's-phrase', k: 'phrase phrasing dynamics expression emotion emotional feeling', a: 'Speak the lyric with meaning first, then sing it. Find the key word of each phrase, start softer, and grow into it. Mark breaths on your lyric sheet.', next: ['lesson 7'] },
+    { id: 's-scales', k: 'scale scales interval intervals pentatonic blues major minor solfege ear', a: 'Start with the major pentatonic (1 2 3 5 6). Perfect fifth = 7 semitones; octave = 12. Ear trainer: three intervals a day.', next: ['lesson 6', 'interval'] },
+    { id: 's-belt', k: 'belt chest head mix falsetto register passaggio', a: 'Registers (chest, head, mix, falsetto) are ways the voice vibrates across your range. Learning to blend them takes time with a good teacher. Do not force chest voice upward; if it strains, lighten it.', next: ['safety'] },
+    { id: 's-song', k: 'song songs choose choosing pick repertoire', a: 'Pick songs that fit the comfortable middle of your range, not the highest note you can barely reach. Learn the melody slowly first, then add words, then add emotion.', next: ['lesson 7'] },
+    { id: 's-clone', k: 'clone cloning imitate imitation copy voice sound-like deepfake', a: 'I do not clone or imitate real people\'s voices. A voice belongs to its owner, and many singers cannot consent. Learn craft ideas from singers you love, then build your own sound.', special: 'boundary' }
+  ],
+  rapper: [
+    { id: 'r-flow', k: 'flow flows cadence pattern rhythm', a: 'Flow is the rhythm pattern of your syllables against the beat. Paste your bars and I will place the syllables on a 16-slot grid so you can see where stress lands. Vary the flow every 4 or 8 bars.', next: ['lesson 2', 'analyze'] },
+    { id: 'r-bar', k: 'bar bars count counting measure 16 sixteen verse hook', a: 'A bar is four beats. A verse is often 16 bars; a hook 4 or 8. Count 1 2 3 4 out loud over a beat until you can feel the restart. Try "bar timer 90".', next: ['lesson 1', 'bar timer 90'] },
+    { id: 'r-rhyme', k: 'rhyme rhymes rhyming perfect slant near multisyllabic multi', a: 'Perfect rhyme: same vowel and ending (flow / know). Slant: similar (time / mind). Multisyllabic: several syllables match, mostly the vowels ("the kind of" / "I find a"). Type "rhyme <word>" and I will list options.', next: ['lesson 4', 'rhyme time'] },
+    { id: 'r-internal', k: 'internal inside chain chaining rhyme-scheme scheme aabb abab', a: 'Internal rhyme sits inside a line. Chain it across bars for a woven sound. Scheme letters show which lines rhyme: AABB = couplets, ABAB = alternating. Paste a verse and I will label it.', next: ['lesson 5'] },
+    { id: 'r-pocket', k: 'pocket behind ahead beat laid-back offbeat swing groove', a: 'The pocket is where your words sit against the beat: on the beat is punchy, ahead pushes, behind relaxes. Add a pickup word before beat 1. The metronome has a swing control to feel it.', next: ['lesson 6', 'metronome'] },
+    { id: 'r-story', k: 'story storytelling narrative scene imagery detail visual', a: 'Setup, turn, landing, with concrete details (colours, sounds). Show instead of tell. Write about your own life and imagination; honest does not have to mean graphic.', next: ['lesson 7'] },
+    { id: 'r-punch', k: 'punchline punchlines wordplay pun metaphor simile double-meaning clever', a: 'Set an expectation, then twist it at the end of the bar so the rhyme lands on the twist word. Try a simile with a surprising "because".', next: ['lesson 8'] },
+    { id: 'r-breath', k: 'breath breathe breathing stamina air lungs run-out', a: 'Plan quick low breaths at the end of a bar or line and mark them on your page. Slow it down first for clarity; speed comes later. Try the breath timer "rap" pattern.', next: ['lesson 3', 'breath timer'] },
+    { id: 'r-free', k: 'freestyle freestyling improvise improv cypher battle blank', a: 'Freestyle is mostly preparation: rhyme families, images and themes ready. Look ahead to your next rhyme word, keep the beat going if you blank, and describe what you see. Try "freestyle prompt".', next: ['lesson 11', 'freestyle prompt'] },
+    { id: 'r-write', k: 'write writing lyrics verse bars writer block stuck ideas topic', a: 'Plan topic and three images, pick a rhyme family per four bars, write in 4-bar blocks, and read each aloud over a beat. If you are stuck: describe a place, list objects, then find rhymes.', next: ['lesson 10'] },
+    { id: 'r-fast', k: 'fast speed double-time doubletime tongue twister quick rapid', a: 'Clear first, then fast. Practise tongue twisters at half speed, then normal. Double-time means twice the syllables in the same bar; a 16-slot bar fits at most about 16 syllables.', next: ['lesson 9'] },
+    { id: 'r-mic', k: 'mic microphone record recording studio headphones pop booth', a: 'Stand a fist away, slightly off-axis to soften pops, record short takes, and do not shout. Listen back and note one fix per take.', next: ['lesson 12'] },
+    { id: 'r-biggie', k: 'biggie notorious christopher wallace big brooklyn', a: 'BiggieFlow is an independent study tool inspired by the storytelling, internal-rhyme and relaxed-pocket craft that critics often discuss in 1990s New York rap. It is not affiliated with the Notorious B.I.G. or his estate, I do not speak as him, and I do not reproduce his lyrics. His catalogue is explicit. Listen to his work yourself (age-appropriate guidance advised), and write your own words.', next: ['lesson 6'], special: 'boundary' },
+    { id: 'r-style', k: 'style voice sound unique original find-your-style own identity', a: 'Your style is your voice, vocabulary and perspective. Borrow techniques (a rhyme pattern, a pocket), never lines, and put your own life and humour into it.', next: ['lesson 12'] },
+    { id: 'r-beat', k: 'beat bpm tempo metronome instrumental loop', a: 'Many boom-bap style beats sit around 80 to 95 bpm; faster styles run 130 to 150 (often felt in half time). Use the metronome tool to practise, and the bar timer to see how long a bar lasts.', next: ['metronome', 'bar timer 90'] },
+    { id: 'r-hook', k: 'hook chorus catchy melody repeat refrain', a: 'A hook is the repeated, memorable part. Keep it short, repeat a key phrase, and make it easy to sing along. Write the hook first if you are stuck.', next: ['lesson 10'] },
+    { id: 'r-clone', k: 'clone cloning imitate imitation voice deepfake sound-like', a: 'I do not clone or imitate real people\'s voices. A voice belongs to its owner, and some artists cannot consent. Learn techniques from artists you admire and build your own sound.', special: 'boundary' },
+    { id: 'r-lyrics', k: 'lyrics write-lyrics-for give-me-lyrics full-song quote', a: 'I do not reproduce or quote copyrighted lyrics. I can explain a technique, analyze your own bars, or give you prompts and rhyme lists so you write your own.', special: 'boundary' }
+  ]
+};
+
+const HELP = {
+  singer: ['lesson <1-12> : a lesson', 'next / back : move between lessons', 'quiz me : multiple-choice quiz (answer with a letter)', 'warm up <minutes> : a warm-up routine', 'practice plan <minutes> : a daily plan', 'run [pentatonic|blues] [easy|medium|hard] : a run to practise', 'consonant <word> : consonants and singing tips', 'note <C4> : frequency; interval : a theory question', 'breath timer : breathing patterns', 'progress : your stats', 'safety : voice-health guidance', 'about : what I am and am not'],
+  rapper: ['lesson <1-12> : a lesson', 'next / back : move between lessons', 'quiz me : multiple-choice quiz (answer with a letter)', 'rhyme <word> : perfect, slant and multi rhymes', 'rhyme time : rhyme-family challenge', 'analyze + paste your 4 or 8 bars : flow grid and tips', 'syllables <phrase> : count and stress', 'bar timer <bpm> : how long a bar lasts', 'freestyle prompt : words to rap about', 'practice plan <minutes> : a daily plan', 'breath timer : breathing patterns', 'progress : your stats', 'safety : voice and health', 'about : what I am and am not']
+};
+
+// ===== bot.js : word bank, rhyme lookup, offline chat engine, progress =====
+const WORDBANK = `love above glove dove shove thrust trust dust must just rust crust bust gust
+flow know show glow grow slow low go so though throw blow below snow row toe tempo hero zero ago
+night light right fight sight bright flight tight might white write height delight tonight spotlight highlight
+time rhyme climb prime chime crime lime dime mime sublime paradigm
+mind find kind blind grind behind remind signed designed aligned combined define refine
+mine line shine sign design divine fine wine vine pine nine dine decline incline
+fire desire higher wire tire choir inspire entire liar buyer flyer
+sky high fly try cry why die lie buy eye goodbye reply deny supply
+day way say play stay pray today away delay display okay gray bay clay ray tray
+rain pain gain chain brain train main plain lane vain explain remain contain complain
+hand stand land band grand brand planned command demand understand
+heart start part art smart chart apart depart cart dart
+dream seem team stream beam theme extreme scheme gleam cream
+street beat heat feet meet seat sweet repeat complete defeat discreet treat neat
+feel real deal steal heal wheel kneel reveal appeal conceal ideal
+free be see me key tree three agree degree guarantee galaxy
+soul whole goal role control console stroll toll roll scroll patrol
+stone bone zone phone alone tone throne known grown shown own prone cologne
+home roam foam dome chrome poem
+gold cold hold told bold sold fold old mold behold unfold
+down town crown brown clown frown drown gown renown
+sound ground found round bound crowd loud proud cloud allowed aloud
+sing ring bring thing king spring wing swing string cling
+song long strong wrong belong along throng
+more door floor shore store core score floor explore ignore before restore adore
+stars bars cars scars guitars mars
+mission vision decision precision ambition tradition position condition addition
+beautiful dutiful
+city pretty witty gritty committee
+money honey sunny funny bunny runny
+rhythm with myth
+flame game name fame same shame frame claim aim blame tame
+rise eyes prize wise size skies lies cries tries surprise advise disguise
+girl world pearl swirl twirl
+face place space race grace base trace chase embrace
+jump pump bump lump thump
+dance chance glance stance trance romance advance
+wave brave save gave cave crave slave behave
+fast last past blast cast vast mast passed
+beat heat seat wheat
+bright night tight sight kite quite
+cool school rule fool tool pool jewel
+chill thrill still will hill skill fill drill until
+pen ten when then again men
+shoe blue true new too few crew view through knew grew flew who do
+smile mile style while file pile trial
+ride side wide pride guide tide slide hide inside
+fall call all wall tall small ball hall crawl
+bounce pounce ounce
+sunshine moonshine
+highway byway skyway
+river shiver deliver quiver
+thunder wonder under number
+mountain fountain
+window shadow meadow widow
+rocket pocket socket locket
+champion companion
+memory energy gravity
+victory history mystery`.split(/\s+/).filter(Boolean);
+const WORD_SET = Array.from(new Set(WORDBANK));
+function rhymesFor(word, max) {
+  const w = String(word).toLowerCase().replace(/[^a-z]/g, ''); if (!w) return null;
+  const res = { perfect: [], slant: [], near: [] };
+  WORD_SET.forEach(c => { if (c === w) return; const r = rhymeRelation(w, c); if (r.type === 'perfect') res.perfect.push([c, r.score]); else if (r.type === 'slant') res.slant.push([c, r.score]); else if (r.type === 'near') res.near.push([c, r.score]); });
+  ['perfect', 'slant', 'near'].forEach(k => { res[k].sort((a, b) => b[1] - a[1]); res[k] = res[k].map(x => x[0]).slice(0, max || 14); });
+  return res;
+}
+
+const FREE_IMAGES = ['a rooftop at sunrise', 'a bus ride home', 'rain on the window', 'a crowded kitchen', 'a basketball court at night', 'a school hallway', 'a train platform', 'a corner store', 'a bright stage', 'an old photograph', 'a city skyline', 'a quiet library', 'a thunderstorm', 'a long road trip', 'a first day somewhere new'];
+const FREE_THEMES = ['working hard', 'a dream you will not drop', 'family', 'friends who stay', 'a goal for next year', 'being nervous but doing it anyway', 'where you are from', 'a promise to yourself', 'learning from a mistake', 'celebrating a small win'];
+const FREE_WORDS = ['anchor', 'engine', 'ladder', 'mirror', 'orbit', 'lantern', 'compass', 'bridge', 'thunder', 'rhythm', 'velvet', 'marathon', 'horizon', 'spark', 'harbor', 'canvas', 'rocket', 'echo', 'blueprint', 'river'];
+
+// ---------- progress ----------
+const dayKey = d => { d = d || new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+const BADGES = [
+  { id: 'first', name: 'First Lesson', test: p => Object.keys(p.done).length >= 1 },
+  { id: 'half', name: 'Halfway There (6 lessons)', test: p => Object.keys(p.done).length >= 6 },
+  { id: 'all', name: 'Full Course (12 lessons)', test: p => Object.keys(p.done).length >= 12 },
+  { id: 'ace', name: 'Quiz Ace (5 of 5)', test: p => p.quizzes.some(q => q.total >= 5 && q.score === q.total) },
+  { id: 'streak3', name: '3-Day Streak', test: p => p.best >= 3 },
+  { id: 'streak7', name: '7-Day Streak', test: p => p.best >= 7 },
+  { id: 'xp200', name: '200 XP', test: p => p.xp >= 200 }
+];
+function loadProgress(store, bot) {
+  let p = null; try { p = store && store.get('flowschool:' + bot); } catch (e) { p = null; }
+  p = p && typeof p === 'object' ? p : {};
+  return Object.assign({ done: {}, quizzes: [], xp: 0, streak: 0, best: 0, last: null, badges: [], log: [], pos: 1 }, p);
+}
+function saveProgress(store, bot, p) { try { store && store.set('flowschool:' + bot, p); } catch (e) { } }
+function touchStreak(p, today) {
+  if (p.last === today) return;
+  const y = new Date(today + 'T12:00:00'); y.setDate(y.getDate() - 1);
+  p.streak = p.last === dayKey(y) ? p.streak + 1 : 1; p.last = today; p.best = Math.max(p.best || 0, p.streak);
+}
+function award(p, xp, why, today) {
+  touchStreak(p, today); p.xp += xp; p.log.push({ d: today, xp, why }); if (p.log.length > 60) p.log.shift();
+  const gained = []; BADGES.forEach(b => { if (!p.badges.includes(b.id) && b.test(p)) { p.badges.push(b.id); gained.push(b.name); } });
+  return gained;
+}
+function levelOf(p, bot) { const L = LESSONS[bot]; let lvl = 1; for (let l = 1; l <= 4; l++) { const ls = L.filter(x => x.level === l); if (ls.every(x => p.done[x.id] != null)) lvl = Math.min(4, l + 1); else break; } return lvl; }
+
+// ---------- chat ----------
+const STOP = new Set('a an the and or but of to in on at by with from for is am are was were be i me my you your it its this that these those do does did can could will would should please tell about what how why when where which who some any more thing things want need like know lets let us get got give show'.split(' '));
+const stem = w => w.replace(/'/g, '').replace(/(ing|ed|es|s|ly)$/, m => w.length > 4 ? '' : m);
+const toks = s => (String(s).toLowerCase().match(/[a-z0-9\-]+/g) || []).map(w => w.replace(/^-+|-+$/g, '')).filter(Boolean);
+function kbIndex(bot) {
+  const entries = KB.shared.concat(KB[bot]), df = {};
+  entries.forEach(e => { e._t = Array.from(new Set(toks(e.k).map(stem))); e._t.forEach(t => df[t] = (df[t] || 0) + 1); });
+  return { entries, df };
+}
+function matchKB(idx, text) {
+  const q = Array.from(new Set(toks(text).filter(w => !STOP.has(w)).map(stem))); if (!q.length) return [];
+  const sc = idx.entries.map(e => { let s = 0; q.forEach(t => { if (e._t.includes(t)) s += 1 / Math.sqrt(idx.df[t] || 1) + 0.4; else if (t.length > 4 && e._t.some(x => x.length > 4 && (x.startsWith(t) || t.startsWith(x)))) s += 0.5; }); return { e, s }; });
+  return sc.filter(x => x.s > 0).sort((a, b) => b.s - a.s);
+}
+const letter = i => String.fromCharCode(65 + i);
+function fmtQ(item, i, n) { return 'Q' + i + '/' + n + ': ' + item.q + '\n' + item.o.map((o, k) => '  ' + letter(k) + ') ' + o).join('\n') + '\nAnswer with a letter (A-D). "skip" or "stop" also work.'; }
+function fmtList(a) { return a.length ? a.join(', ') : '(none found in my word bank)'; }
+
+function createBot(botId, store, opt) {
+  opt = opt || {}; const B = BOTS[botId], idx = kbIndex(botId), lessons = LESSONS[botId], today = opt.today || (() => dayKey());
+  let P = loadProgress(store, botId), S = { mode: null }, lastTopic = null;
+  const save = () => saveProgress(store, botId, P);
+  const R = (text, extra) => Object.assign({ text, chips: B.chips.slice(0, 6) }, extra || {});
+  const gainText = g => g.length ? '\n\nBadge unlocked: ' + g.join(', ') + '!' : '';
+
+  function showLesson(n) {
+    n = clamp(n, 1, lessons.length); const l = lessons[n - 1]; P.pos = n; save();
+    const done = P.done[l.id] != null;
+    let g = []; if (!P.seen) P.seen = {}; if (!P.seen[l.id]) { P.seen[l.id] = 1; g = award(P, 10, 'read ' + l.id, today()); save(); }
+    return R('LESSON ' + n + ' of ' + lessons.length + ' · Level ' + l.level + ' (' + B.levels[l.level - 1] + ')' + (done ? ' · done' : '') + '\n' + l.title + '\nGoal: ' + l.goal + '\n\n' + l.body.join('\n\n') + '\n\nDRILL\n' + l.drill.map((d, i) => (i + 1) + '. ' + d).join('\n') + '\n\nSay "check" for the 2-question checkpoint, or "next" for the next lesson.' + gainText(g), { chips: ['check', 'next', 'back', 'lessons', 'quiz me'] });
+  }
+  function startQuiz(pool, label, lessonId) {
+    const items = shuffle(pool).slice(0, lessonId ? pool.length : 5).map(q => { const order = shuffle(q.o.map((_, k) => k)); return { q: q.q, o: order.map(k => q.o[k]), a: order.indexOf(q.a), why: q.why }; }); S = { mode: 'quiz', items, i: 0, score: 0, label, lessonId };
+    return R(label + '\n\n' + fmtQ(items[0], 1, items.length), { chips: ['A', 'B', 'C', 'D', 'skip', 'stop'] });
+  }
+  function quizPool() { const out = []; lessons.forEach(l => { if (P.done[l.id] != null || P.pos >= l.n) l.quiz.forEach(q => out.push(q)); }); QBANK[botId].forEach(q => out.push(q)); return out; }
+  function answerQuiz(t) {
+    const s = S, it = s.items[s.i]; let ans = null; const m = /^\(?([a-d])\)?[\).]?$/i.exec(t.trim()) || /^(?:answer|ans|it'?s|its)\s+([a-d])\b/i.exec(t.trim());
+    if (/^(stop|quit|exit|end|cancel)\b/i.test(t)) { S = { mode: null }; return R('Quiz stopped. Score so far: ' + s.score + '/' + s.i + '.'); }
+    if (/^skip\b/.test(t.toLowerCase())) { s.i++; return nextQ('Skipped. The answer was ' + letter(it.a) + ') ' + it.o[it.a] + '. ' + it.why); }
+    if (!m) return R('Please answer with A, B, C or D (or "skip" / "stop").\n\n' + fmtQ(it, s.i + 1, s.items.length), { chips: ['A', 'B', 'C', 'D', 'skip', 'stop'] });
+    ans = m[1].toUpperCase().charCodeAt(0) - 65; if (ans >= it.o.length) return R('Choose A-' + letter(it.o.length - 1) + '.');
+    const ok = ans === it.a; if (ok) s.score++; s.i++;
+    return nextQ((ok ? 'Correct! ' : 'Not quite. The answer is ' + letter(it.a) + ') ' + it.o[it.a] + '. ') + it.why);
+  }
+  function nextQ(prefix) {
+    const s = S;
+    if (s.i >= s.items.length) {
+      const sc = s.score, tot = s.items.length; let msg = prefix + '\n\nFinished: ' + sc + '/' + tot + '.', g = [];
+      P.quizzes.push({ d: today(), score: sc, total: tot, label: s.label }); if (P.quizzes.length > 40) P.quizzes.shift();
+      let xp = sc * 5;
+      if (s.lessonId) { const pass = sc >= Math.ceil(tot / 2); if (pass) { const first = P.done[s.lessonId] == null; P.done[s.lessonId] = Math.max(P.done[s.lessonId] || 0, sc); if (first) xp += 20; msg += ' Lesson complete' + (sc === tot ? ' (mastered)!' : '.'); } else msg += ' Review the lesson and try "check" again.'; }
+      g = award(P, xp, 'quiz ' + sc + '/' + tot, today()); save(); S = { mode: null };
+      return R(msg + ' +' + xp + ' XP.' + gainText(g) + (s.lessonId ? '\nSay "next" for the next lesson.' : ''), { chips: ['next', 'quiz me', 'progress', 'practice plan 20'] });
+    }
+    return R(prefix + '\n\n' + fmtQ(s.items[s.i], s.i + 1, s.items.length), { chips: ['A', 'B', 'C', 'D', 'skip', 'stop'] });
+  }
+
+  function flowReport(text) {
+    const lines = text.split(/\n+/).map(x => x.trim()).filter(Boolean).slice(0, 16);
+    if (!lines.length) return R('Paste your bars, one line per bar.');
+    const v = analyzeVerse(lines.join('\n')); let out = [];
+    v.bars.forEach((b, i) => { out.push('Bar ' + (i + 1) + ' [' + v.scheme[i] + '] ' + b.n + ' syl, ' + b.density + (b.stressed ? ', ' + b.onBeat + '/' + b.stressed + ' stressed on a beat' : '') + '\n  ' + gridString(b) + '\n  ' + b.text); });
+    const extra = [];
+    v.ints.forEach((x, i) => { if (x.length) extra.push('Bar ' + (i + 1) + ' internal: ' + x.slice(0, 3).map(p => p[0] + '/' + p[1]).join(', ')); });
+    v.alli.forEach((x, i) => { if (x.pairs >= 2) extra.push('Bar ' + (i + 1) + ' alliteration run of ' + x.run); });
+    const g = award(P, 5, 'analyzed a verse', today()); save();
+    return R(out.join('\n\n'), { pre: true, extra: 'Grid key: X = stressed syllable, x = unstressed, . = empty slot. Four groups = four beats; each group is 4 sixteenth notes.\n\n' + v.tips.join('\n') + (extra.length ? '\n\n' + extra.join('\n') : '') + '\n\nThis is a spelling-based estimate; say the line over a beat to confirm.' + gainText(g), chips: ['analyze', 'rhyme time', 'lesson 2', 'practice plan 20'] });
+  }
+
+  function lyricReport(text) { // singer: paste lyric lines
+    const lines = text.split(/\n+/).map(x => x.trim()).filter(Boolean).slice(0, 16), out = [];
+    lines.forEach((l, i) => { const w = tokensOf(l), sy = w.reduce((a, x) => a + syllables(x), 0), lw = w[w.length - 1] || '', c = coachWord(lw), last = c[c.length - 1]; out.push('Line ' + (i + 1) + ': ' + sy + ' syllables. Ends on "' + lw + '"' + (last ? (last.holdable ? ' (a good word to hold, ends on a vowel or a nasal/liquid)' : ' (ends on a hard consonant; keep it short)') : '')); });
+    return R(out.join('\n') + '\n\nBreathe at line ends or commas; find the key word in each line and grow into it.', { pre: true });
+  }
+
+  function route(raw) {
+    const t = raw.trim(), low = t.toLowerCase(); let m;
+    if (!t) return R('Say something or type "help".');
+    if (S.mode === 'quiz') return answerQuiz(t);
+    if (S.mode === 'verse') { S = { mode: null }; return botId === 'rapper' ? flowReport(raw) : lyricReport(raw); }
+    if (S.mode === 'rhymetime') {
+      if (/^(done|stop|quit|exit|end|finish)\b/.test(low)) { const sc = S.found.length; const g = award(P, Math.min(sc, 10), 'rhyme time ' + sc, today()); save(); const w = S.word; S = { mode: null }; return R('Rhyme time over: ' + sc + ' rhymes for "' + w + '". +' + Math.min(sc, 10) + ' XP.' + gainText(g)); }
+      const ws = toks(t).filter(x => x.length > 1), good = [], bad = [];
+      ws.forEach(w => { if (w === S.word || S.found.includes(w)) return; const r = rhymeRelation(S.word, w); if (r.type === 'perfect' || r.type === 'slant') { S.found.push(w); good.push(w + ' (' + r.type + ')'); } else bad.push(w); });
+      return R((good.length ? 'Nice: ' + good.join(', ') + '. ' : '') + (bad.length ? 'Not a rhyme I can hear in the spelling: ' + bad.join(', ') + '. ' : '') + 'Total ' + S.found.length + '. Keep going or type "done".', { chips: ['done'] });
+    }
+    if (S.mode === 'interval') { const q = S.q; S = { mode: null }; const n = parseInt(t, 10), nm = low; const ok = n === q.answer || nm.includes(q.name) || nm.replace(/\s/g, '') === q.note.toLowerCase(); return R((ok ? 'Correct! ' : 'Not quite. ') + q.name + ' = ' + q.answer + ' semitones, so ' + midiName(q.low) + ' up to ' + q.note + '.' + (INTERVAL_SONG_HINTS[q.answer] ? '\nSong hint: ' + INTERVAL_SONG_HINTS[q.answer] + '.' : ''), { chips: ['interval', 'quiz me'] }); }
+
+    // safety first
+    if (/\b(kill myself|suicid|want to die|hurt myself|self[- ]?harm|end my life|abuse[ds]?|being abused)\b/.test(low)) return R("I'm really sorry you're dealing with something that heavy. You matter, and you deserve support from a real person right now. Please tell a trusted adult (a parent, teacher, coach or counsellor) today. If you are in the US you can call or text 988 any time; if you are elsewhere, contact your local emergency number or crisis line. If you are in immediate danger, call your local emergency number. I'm just a practice tool and can't give you the help a person can.", { chips: ['safety'] });
+    if (/(cough(ing)? (up )?blood|can'?t breathe|cannot breathe|trouble breathing|can'?t swallow|trouble swallowing|choking)/.test(low)) return R('That needs a doctor now, not practice. If it is severe or sudden, call your local emergency number. Otherwise tell a trusted adult and see a doctor soon. Stop singing and rapping until you have been checked.', { chips: ['safety'] });
+    // boundaries
+    if (/\b(clone|deepfake|impersonat\w*|sound (exactly )?like|voice of|in the voice of|be (biggie|mahalia|tupac|beyonce))\b/.test(low) && /\b(voice|sound|record|generate|make|do)\b/.test(low)) return R("I can't clone or imitate a real person's voice, and I can't speak as them. A voice belongs to its owner, and some artists can't consent. I can teach you the craft ideas you admire (rhythm, rhyme, phrasing) so you build your own sound.", { chips: ['lesson 1', 'help'] });
+    if (/\b(full|whole|exact|entire)?\s*lyrics?\b.*\b(of|to|for|from)\b/.test(low) && /\b(write|give|print|quote|show|paste|tell|recite|sing)\b/.test(low) || /\b(recite|quote|reproduce)\b.*\b(lyrics?|verse|song)\b/.test(low)) return R("I don't reproduce or quote copyrighted lyrics. I can explain the technique, analyze your own bars, or give you prompts and rhyme lists so you write your own.", { chips: botId === 'rapper' ? ['freestyle prompt', 'rhyme time'] : ['lesson 7', 'warm up'] });
+    if (/\b(write|give|make|do)\b.*\b(sex|sexual|explicit|drugs?|gun|guns|kill|violent|violence|nude|porn)\w*/.test(low) || /\b(diss|insult)\b.*\b(race|religion|gay|disab)/.test(low)) return R('I keep things clean and kind for young artists, so I will pass on that. I can help you write something vivid and honest without explicit or hurtful content.', { chips: ['lesson 7', 'freestyle prompt'] });
+
+    // commands
+    if (/^(help|\?|commands|menu|what can you do)\b/.test(low)) return R('Here is what I can do:\n' + HELP[botId].map(x => '• ' + x).join('\n'), { chips: B.chips });
+    if (/^(about|credits|disclaimer)\b/.test(low)) return R(B.about);
+    if (/^(safety|voice health|vocal health|health)\b/.test(low)) return R('VOICE AND BODY SAFETY\n' + VOICE_SAFETY.map(x => '• ' + x).join('\n') + '\n\nThis is general guidance, not medical advice. Your doctor and voice teacher know you best.', { chips: ['warm up', 'breath timer', 'about'] });
+    if (/^(lessons|curriculum|course|syllabus)\b/.test(low)) return R(lessons.map(l => (P.done[l.id] != null ? '[x] ' : '[ ] ') + l.n + '. ' + l.title + ' (L' + l.level + ')').join('\n') + '\n\nSay "lesson 3" to open one.', { pre: true, chips: ['lesson ' + (P.pos || 1), 'next'] });
+    if ((m = /^(?:lesson|l)\s*(\d{1,2})\b/.exec(low))) { const n = parseInt(m[1], 10); if (n < 1 || n > lessons.length) return R('Lessons run from 1 to ' + lessons.length + '. Say "lessons" for the list.'); return showLesson(n); }
+    if (/^(start|begin|start course|first lesson)\b/.test(low)) return showLesson(1);
+    if (/^(next|continue|go on|next lesson)\b/.test(low) && !/\bnext (level)\b/.test(low)) return showLesson(Math.min(lessons.length, (P.pos || 0) + 1));
+    if (/^(back|previous|prev|last lesson)\b/.test(low)) return showLesson(Math.max(1, (P.pos || 2) - 1));
+    if (/^(check|checkpoint|test me|lesson quiz)\b/.test(low)) { const l = lessons[(P.pos || 1) - 1]; return startQuiz(l.quiz, 'CHECKPOINT: ' + l.title, l.id); }
+    if (/^(quiz|test|quiz me|question)\b/.test(low)) return startQuiz(quizPool(), 'QUIZ (5 questions)');
+    if (/^(progress|stats|score|streak|xp|badges)\b/.test(low)) {
+      const done = Object.keys(P.done).length, lvl = levelOf(P, botId), qs = P.quizzes.slice(-3).map(q => q.score + '/' + q.total).join(', ');
+      return R('PROGRESS\nLessons done: ' + done + '/' + lessons.length + ' · Level ' + lvl + ' (' + B.levels[lvl - 1] + ')\nXP: ' + P.xp + ' · Streak: ' + P.streak + ' day(s) (best ' + P.best + ')\nLast quizzes: ' + (qs || 'none yet') + '\nBadges: ' + (P.badges.length ? P.badges.map(id => BADGES.find(b => b.id === id).name).join('; ') : 'none yet') + '\n\nNext step: ' + (done < lessons.length ? 'lesson ' + (lessons.find(l => P.done[l.id] == null).n) : 'review with "quiz me"'), { pre: true });
+    }
+    if (/^reset( my)? progress\b/.test(low)) { S = { mode: 'confirmreset' }; return R('This erases your lessons, XP and streak for ' + B.name + '. Type "yes reset" to confirm.', { chips: ['yes reset', 'cancel'] }); }
+    if (/^yes reset\b/.test(low)) { P = loadProgress(null, botId); save(); return R('Progress reset.'); }
+    if ((m = /^(?:practice|practise)\s*plan\s*(\d+)?\s*(?:min\w*)?\s*(.*)$/.exec(low)) || /^plan\b/.test(low)) { const mm = m || /^plan\s*(\d+)?\s*(.*)$/.exec(low); const minutes = parseInt(mm[1], 10) || 20, p = practicePlan(botId, minutes, levelOf(P, botId), (mm[2] || '').trim() || null); return R('PRACTICE PLAN · ' + p.minutes + ' minutes\n' + p.items.map((x, i) => (i + 1) + '. ' + x.min + ' min: ' + x.text).join('\n') + '\n\n' + p.rules.join('\n'), { pre: true, chips: ['warm up', 'quiz me', 'progress'] }); }
+    if (botId === 'singer' && (m = /^warm[ -]?up\s*(\d+)?/.exec(low))) { const w = buildWarmup(parseInt(m[1], 10) || 8, levelOf(P, botId)); return R('WARM-UP · about ' + w.minutes + ' minutes (stay easy; stop if anything hurts)\n\n' + w.items.map((x, i) => (i + 1) + '. ' + x.name + ' (' + x.min + ' min)\n   ' + x.steps.join('\n   ')).join('\n\n'), { pre: true, chips: ['breath timer', 'run', 'safety'] }); }
+    if (botId === 'rapper' && /^warm[ -]?up\b/.test(low)) return R('RAP WARM-UP (3 minutes)\n1. Easy breath: in 4, out on "sss" for 6, three times.\n2. Lip trill or hum for 30 seconds, quietly.\n3. Slow tongue twisters (three times each at half speed): "red leather, yellow leather"; "unique New York".\n4. Count 4 bars over a beat at 85 bpm, saying one word per beat.\nStop if your voice hurts or goes hoarse.', { pre: true, chips: ['breath timer', 'freestyle prompt', 'safety'] });
+    if (/^breath/.test(low)) return R('BREATH PATTERNS (use the timer tool in the app, or count along)\n' + Object.values(BREATH).map(b => '• ' + b.name + ': ' + b.phases.map(p => p[0] + ' ' + p[1] + 's').join(' → ') + ' (x' + b.rounds + ')').join('\n') + '\nStay relaxed; do not strain or hold your breath hard.', { pre: true });
+    if (botId === 'singer' && (m = /^(?:run|riff)\b\s*(.*)$/.exec(low))) { const a = m[1], sc = /blues/.test(a) ? 'blues' : /minor/.test(a) ? 'minor pentatonic' : 'major pentatonic', lv = /hard|3/.test(a) ? 3 : /med|2/.test(a) ? 2 : 1, r = genRun({ tonic: 60, scale: sc, level: lv }); return R('RUN (' + sc + ', ' + r.dir + ', level ' + lv + ') in C\n' + r.names.join(' – ') + '\n\n' + r.tips.join('\n') + '\n\nIn the app you can hear it played back.', { pre: true, chips: ['run blues', 'run hard', 'lesson 8'] }); }
+    if (botId === 'singer' && (m = /^(?:consonants?|diction)\s+(.+)$/.exec(low))) { const words = toks(m[1]).slice(0, 4); return R(words.map(w => { const c = coachWord(w); return w.toUpperCase() + '\n' + c.map(s => '  syllable ' + s.idx + ' (' + s.vowel + (s.stress ? ', stressed' : '') + '): start ' + (s.onset.map(x => x.t + ' [' + x.c.join(', ') + ']').join(' ') || 'vowel') + ' · end ' + (s.coda.map(x => x.t + ' [' + x.c.join(', ') + ']').join(' ') || 'vowel') + (s.holdable ? ' · holdable' : '') + (s.tips.length ? '\n    ' + s.tips.join('\n    ') : '')).join('\n'); }).join('\n\n'), { pre: true }); }
+    if (botId === 'singer' && (m = /^note\s+([a-g][#b]?-?\d)\b/.exec(low))) { const mi = noteToMidi(m[1]); return R(midiName(mi) + ' = ' + midiToHz(mi).toFixed(2) + ' Hz (MIDI ' + mi + ')'); }
+    if (botId === 'singer' && /^interval/.test(low)) { const q = intervalQuestion(12); S = { mode: 'interval', q }; return R(q.text + '\nAnswer with the number of semitones, the interval name, or the note.', { chips: ['5', '7', '12'] }); }
+    if (botId === 'rapper' && (m = /^(?:rhymes?(?: for| with)?|what rhymes with|words that rhyme with)\s+([a-z']+)\s*$/.exec(low)) && m[1] !== 'time') {
+      const w = m[1].replace(/'/g, ''), r = rhymesFor(w, 12), sy = syllabify(w);
+      return R('"' + w + '" · ' + sy.length + ' syllable(s) · I read it as [' + g2p(w).join(' ') + ']\nPerfect: ' + fmtList(r.perfect) + '\nSlant: ' + fmtList(r.slant) + '\nNear: ' + fmtList(r.near) + '\n\nMy word bank is small (a few hundred clean words); use your own ear to find more. Try a multisyllabic version: match the vowels of a two-word phrase.', { pre: true, chips: ['rhyme time', 'analyze'] });
+    }
+    if (botId === 'rapper' && /^rhyme time\b|^rhyme (challenge|game)\b/.test(low)) { const w = pick(['night', 'flow', 'mind', 'sky', 'time', 'gold', 'fire', 'dream', 'street', 'rain', 'stone', 'heart']); S = { mode: 'rhymetime', word: w, found: [] }; return R('RHYME TIME: type as many words as you can that rhyme with "' + w + '" (perfect or slant). Type "done" when finished.', { chips: ['done'] }); }
+    if (botId === 'rapper' && (m = /^(?:syllables?|stress|count)\s+(.+)$/.exec(low))) { const ws = tokensOf(m[1]), parts = ws.map(w => { const s = syllabify(w), fw = FUNCTION_WORDS.has(w.toLowerCase()) && s.length === 1; return w + ': ' + s.length + ' (' + s.map(x => x.stress && !fw ? 'STRESS' : 'unstressed').join(' · ') + ')'; }); return R(parts.join('\n') + '\nTotal syllables: ' + ws.reduce((a, w) => a + syllables(w), 0), { pre: true }); }
+    if (botId === 'rapper' && (m = /^(?:bar timer|bars?|timer|bpm)\s*(\d{2,3})?/.exec(low)) && /^(bar timer|bpm|timer|bars)\b/.test(low)) { const b = clamp(parseInt(m[1], 10) || 90, 50, 200); return R('AT ' + b + ' BPM\n1 bar = ' + barSeconds(b).toFixed(2) + ' s · 4 bars = ' + verseSeconds(b, 4).toFixed(1) + ' s · 16 bars = ' + verseSeconds(b, 16).toFixed(1) + ' s\nSyllables per second: 8 per bar = ' + sylPerSecond(8, b).toFixed(1) + ' · 12 per bar = ' + sylPerSecond(12, b).toFixed(1) + ' · 16 per bar = ' + sylPerSecond(16, b).toFixed(1) + '\nOne beat = ' + beatMs(b).toFixed(0) + ' ms; one 16th note = ' + (beatMs(b) / 4).toFixed(0) + ' ms.', { pre: true, chips: ['bar timer 80', 'bar timer 140', 'metronome'] }); }
+    if (botId === 'rapper' && /^(freestyle|prompt|cypher)/.test(low)) { const ws = shuffle(FREE_WORDS).slice(0, 4); return R('FREESTYLE PROMPT\nScene: ' + pick(FREE_IMAGES) + '\nTheme: ' + pick(FREE_THEMES) + '\nWords to land: ' + ws.join(', ') + '\nRhyme family to chain: ' + pick(['-ine', '-ight', '-ow', '-ay', '-ame', '-ound', '-ing']) + '\nTempo: ' + (80 + 5 * Math.floor(rnd() * 4)) + ' bpm. Do 4 bars, one breath each.', { pre: true, chips: ['freestyle prompt', 'rhyme time', 'analyze'] }); }
+    if (/^(analy[sz]e|flow|check my (bars|verse|lyrics?)|grade)\b/.test(low) || (/\n/.test(t) && t.split(/\n+/).filter(x => tokensOf(x).length >= 3).length >= 2)) {
+      let body = t.replace(/^(analy[sz]e|flow|check my (bars|verse|lyrics?)|grade)\b[:\s-]*/i, '');
+      if (!body.trim()) { S = { mode: 'verse' }; return R(botId === 'rapper' ? 'Paste your bars now, one bar per line (4 to 16 lines).' : 'Paste your lyric lines now, one per line.'); }
+      return botId === 'rapper' ? flowReport(body) : lyricReport(body);
+    }
+    if (/^(tell me more|more|another|go deeper|explain more)\b/.test(low) && lastTopic && lastTopic.next) { const nx = lastTopic.next[0]; return route(nx); }
+    if (/^(metronome|tuner|tools?|ear trainer)\b/.test(low)) return R('The tools tab has the ' + (botId === 'rapper' ? 'metronome, tap tempo, rhyme lab, flow grid and freestyle prompter' : 'pitch tuner, formant view, ear trainer, run builder, consonant coach and warm-up player') + '. In the terminal version, use the text commands instead.');
+
+    // knowledge base
+    const hits = matchKB(idx, t);
+    if (hits.length && hits[0].s >= 1.0) {
+      const e = hits[0].e; lastTopic = e;
+      if (e.special === 'greet') return R(B.intro + '\n\nTry: "lesson 1", "quiz me", or ask me a question.', { chips: B.chips });
+      return R(e.a, { chips: (e.next || []).concat(['help']).slice(0, 5) });
+    }
+    const sug = hits.slice(0, 3).map(h => h.e).filter(e => e.a).map(e => e.id.replace(/^[sr]-/, ''));
+    return R("I'm a simple offline coach, so I may have missed that. I can answer questions about " + (botId === 'singer' ? 'breath, warm-ups, range, pitch, vowels, consonants, runs, mic, nerves and voice health' : 'flow, bars, rhyme, pocket, storytelling, punchlines, freestyle, breath and recording') + ', teach lessons, and run quizzes.' + (sug.length ? '\nClosest topics: ' + sug.join(', ') + '.' : '') + '\nType "help" for commands.', { chips: B.chips });
+  }
+  return { id: botId, bot: B, reply: raw => { const r = route(String(raw == null ? '' : raw).slice(0, 4000)); return r; }, greet: () => R(B.intro, { chips: B.chips }), progress: () => P, state: () => S, lessons, reload: () => { P = loadProgress(store, botId); } };
+}
+
+const FS = { INTERVAL_SONG_HINTS, mulberry32, seedRng, g2p, syllabify, syllables, rhymeRelation, multiMatch, stressedTail, analyzeBar, analyzeVerse, gridString, schemeLetters, internalRhymes, rhymesFor, createBot, BOTS, LESSONS, QBANK, KB, WARMUPS, BREATH, VOICE_SAFETY, HELP, BADGES, INTERVALS, SCALES, genRun, buildWarmup, coachWord, intervalQuestion, practicePlan, noteToMidi, midiToHz, midiName, hzToNote, centsBetween, scaleNotes, barSeconds, beatMs, swingOffsetMs, tapTempo, sylPerSecond, verseSeconds, FREE_WORDS, FREE_IMAGES, FREE_THEMES, dayKey, tokensOf, lastWord, vowelSeq, levelOf, loadProgress, WORD_SET, CCLASS, SLOT_W, shuffle, pick, rnd, clamp };
+
+// <DSP>
+const DSP = (() => {
+  const NOTE = ['C','C♯','D','E♭','E','F','F♯','G','A♭','A','B♭','B'];
+  function decimate(x, f){
+    if (f <= 1) return Float64Array.from(x);
+    const m = Math.floor(x.length / f), y = new Float64Array(m);
+    for (let i = 0; i < m; i++){ let s = 0; for (let j = 0; j < f; j++) s += x[i*f+j]; y[i] = s / f; }
+    return y;
+  }
+  function rms(x){ let s = 0; for (let i = 0; i < x.length; i++) s += x[i]*x[i]; return Math.sqrt(s / x.length); }
+  // Normalised autocorrelation pitch tracker. Picks the shortest strong peak to avoid octave errors.
+  function pitch(x, fs, fmin = 70, fmax = 1100){
+    const n = x.length, minLag = Math.max(2, Math.floor(fs / fmax)), maxLag = Math.min(Math.floor(fs / fmin), n - 3);
+    let mean = 0; for (let i = 0; i < n; i++) mean += x[i]; mean /= n;
+    const z = new Float64Array(n); let e = 0;
+    for (let i = 0; i < n; i++){ z[i] = x[i] - mean; e += z[i]*z[i]; }
+    if (e <= 0) return { f0: 0, clarity: 0 };
+    const r = new Float64Array(maxLag + 2);
+    for (let lag = minLag - 1; lag <= maxLag + 1; lag++){
+      let s = 0; for (let i = 0; i < n - lag; i++) s += z[i]*z[i+lag];
+      r[lag] = (s / (n - lag)) / (e / n);
+    }
+    const peaks = []; let best = 0;
+    for (let l = minLag; l <= maxLag; l++){
+      if (r[l] > r[l-1] && r[l] >= r[l+1] && r[l] > 0.3){ peaks.push(l); if (r[l] > best) best = r[l]; }
+    }
+    if (!peaks.length) return { f0: 0, clarity: 0 };
+    let lag = peaks.find(l => r[l] >= 0.95 * best);
+    const a = r[lag-1], b = r[lag], c = r[lag+1], d = a - 2*b + c;
+    const shift = d !== 0 ? 0.5 * (a - c) / d : 0;
+    return { f0: fs / (lag + shift), clarity: best };
+  }
+  function lpc(x, order){
+    const n = x.length, r = new Float64Array(order + 1);
+    for (let k = 0; k <= order; k++){ let s = 0; for (let i = 0; i < n - k; i++) s += x[i]*x[i+k]; r[k] = s; }
+    r[0] *= 1.0001; r[0] += 1e-9;
+    const a = new Float64Array(order + 1); a[0] = 1; let err = r[0];
+    for (let i = 1; i <= order; i++){
+      let acc = r[i]; for (let j = 1; j < i; j++) acc += a[j]*r[i-j];
+      const k = -acc / err, prev = a.slice();
+      for (let j = 1; j < i; j++) a[j] = prev[j] + k*prev[i-j];
+      a[i] = k; err *= (1 - k*k); if (err <= 0) break;
+    }
+    return a;
+  }
+  // Formant candidates = peaks of the LPC spectral envelope.
+  function formants(x, fs, order){
+    const n = x.length, y = new Float64Array(n);
+    y[0] = x[0]; for (let i = 1; i < n; i++) y[i] = x[i] - 0.97*x[i-1];
+    for (let i = 0; i < n; i++) y[i] *= 0.54 - 0.46*Math.cos(2*Math.PI*i/(n-1));
+    const a = lpc(y, order), N = 512, fmaxEval = Math.min(5000, fs/2 - 50), env = new Float64Array(N);
+    for (let k = 0; k < N; k++){
+      const w = 2*Math.PI*(k*fmaxEval/(N-1))/fs; let re = 1, im = 0;
+      for (let j = 1; j <= order; j++){ re += a[j]*Math.cos(w*j); im -= a[j]*Math.sin(w*j); }
+      env[k] = 1 / Math.sqrt(re*re + im*im);
+    }
+    const out = [];
+    for (let k = 1; k < N - 1; k++){
+      if (env[k] > env[k-1] && env[k] >= env[k+1]){
+        const l0 = Math.log(env[k-1]), l1 = Math.log(env[k]), l2 = Math.log(env[k+1]), d = l0 - 2*l1 + l2;
+        const sh = d !== 0 ? 0.5*(l0 - l2)/d : 0, f = (k + sh)*fmaxEval/(N-1);
+        if (f > 180) out.push({ f, mag: env[k] });
+      }
+    }
+    return out;
+  }
+  function analyze(buf, fs){
+    const level = rms(buf);
+    if (level < 0.004) return { level, voiced: false };
+    const dp = Math.max(1, Math.round(fs / 24000));
+    const p = pitch(decimate(buf.subarray(Math.max(0, buf.length - 2048*dp)), dp), fs/dp);
+    if (!p.f0 || p.clarity < 0.5) return { level, voiced: false };
+    const df = Math.max(1, Math.round(fs / 11025)), nWin = Math.round(0.04 * fs);
+    const seg = decimate(buf.subarray(buf.length - nWin), df), fsd = fs / df;
+    const fm = formants(seg, fsd, Math.round(fsd/1000) + 2);
+    return { level, voiced: true, f0: p.f0, clarity: p.clarity, F1: fm[0] ? fm[0].f : 0, F2: fm[1] ? fm[1].f : 0, F3: fm[2] ? fm[2].f : 0 };
+  }
+  function hzToNote(f){
+    const m = 69 + 12*Math.log2(f/440), mi = Math.round(m);
+    return { name: NOTE[((mi % 12) + 12) % 12] + (Math.floor(mi/12) - 1), cents: Math.round((m - mi)*100), midi: mi };
+  }
+  function midiToHz(m){ return 440 * Math.pow(2, (m - 69)/12); }
+  function midiName(m){ return NOTE[((m % 12) + 12) % 12] + (Math.floor(m/12) - 1); }
+  function harmonicOffset(F, f0){
+    const n = Math.max(1, Math.round(F / f0));
+    return { n, cents: 1200*Math.log2(F / (n*f0)) };
+  }
+  return { decimate, rms, pitch, lpc, formants, analyze, hzToNote, midiToHz, midiName, harmonicOffset };
+})();
+
+(function(){
+'use strict';
+const $ = id => document.getElementById(id);
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+const mem = {};
+const store = { get(k){ try { const v = localStorage.getItem(k); if (v) return JSON.parse(v); } catch(e){} return mem[k] || null; }, set(k,v){ mem[k] = v; try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} } };
+let botId = 'singer', bot = null; const bots = {}, logs = {};
+try { const b = localStorage.getItem('flowschool:last'); if (b === 'rapper') botId = 'rapper'; } catch(e){}
+const TABS = [['chat','Chat'],['lessons','Lessons'],['tools','Tools'],['practice','Practice'],['progress','Progress'],['about','About']];
+let tab = 'chat';
+
+// ---------- audio ----------
+let ctx = null; const ac = () => { if (!ctx) { const C = window.AudioContext || window.webkitAudioContext; if (!C) return null; ctx = new C(); } if (ctx.state === 'suspended') ctx.resume(); return ctx; };
+function tone(midi, t0, dur, type, gain){ const c = ac(); if (!c) return; const o = c.createOscillator(), g = c.createGain(); o.type = type || 'triangle'; o.frequency.value = FS.midiToHz(midi); g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(gain || 0.25, t0 + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur); o.connect(g); g.connect(c.destination); o.start(t0); o.stop(t0 + dur + 0.05); }
+function click(t0, accent, swing){ const c = ac(); if (!c) return; const o = c.createOscillator(), g = c.createGain(); o.frequency.value = accent ? 1400 : 900; g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.3, t0 + 0.002); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.06); o.connect(g); g.connect(c.destination); o.start(t0); o.stop(t0 + 0.08); }
+
+// ---------- shell ----------
+function mountTabs(){ const n = $('tabs'); n.textContent = ''; TABS.forEach(([id, label]) => { const b = el('button', null, label); b.type = 'button'; b.setAttribute('role','tab'); b.setAttribute('aria-selected', String(id === tab)); b.onclick = () => showTab(id); n.appendChild(b); }); }
+function showTab(id){ tab = id; TABS.forEach(([t]) => { $('p-' + t).hidden = t !== id; }); mountTabs(); if (id === 'lessons') renderLessons(); if (id === 'progress') renderProgress(); if (id === 'tools') renderTool(); stopAll(); }
+function setBot(id){
+  stopAll(); botId = id; try { localStorage.setItem('flowschool:last', id); } catch(e){}
+  if (!bots[id]) { bots[id] = FS.createBot(id, store); logs[id] = []; }
+  bot = bots[id]; document.documentElement.setAttribute('data-bot', id);
+  const B = FS.BOTS[id]; $('title').textContent = B.name; $('tag').textContent = B.tagline;
+  $('bs').setAttribute('aria-pressed', String(id === 'singer')); $('br').setAttribute('aria-pressed', String(id === 'rapper'));
+  $('warmCard').hidden = id !== 'singer'; $('aboutH').textContent = 'About ' + B.name; $('aboutT').textContent = B.about;
+  $('vizNote').textContent = id === 'singer' ? 'Mic tools work only when your browser allows the microphone.' : '';
+  const ts = $('toolSel'); ts.textContent = ''; toolsFor(id).forEach(t => { const o = el('option', null, t[1]); o.value = t[0]; ts.appendChild(o); });
+  const bs = $('bsel'); bs.textContent = ''; Object.keys(FS.BREATH).forEach(k => { const o = el('option', null, FS.BREATH[k].name); o.value = k; bs.appendChild(o); });
+  const sf = $('safe'); sf.textContent = ''; FS.VOICE_SAFETY.forEach(s => sf.appendChild(el('li', null, s)));
+  $('plan').textContent = ''; $('warm').textContent = '';
+  renderLog(); if (!logs[id].length) addBot(bot.greet());
+  showTab(tab);
+}
+$('bs').onclick = () => setBot('singer'); $('br').onclick = () => setBot('rapper');
+
+// ---------- chat ----------
+function addBot(r){ logs[botId].push({ who: 'bot', r }); renderLog(); setChips(r.chips); }
+function addMe(t){ logs[botId].push({ who: 'me', t }); renderLog(); }
+function renderLog(){ const L = $('log'); L.textContent = ''; logs[botId].slice(-60).forEach(m => { const d = el('div', 'msg ' + m.who); if (m.who === 'me') d.textContent = m.t; else { const p = el('div'); p.textContent = m.r.text; d.appendChild(p); if (m.r.pre) d.classList.add('pre'); if (m.r.extra) d.appendChild(el('span', 'x', m.r.extra)); } L.appendChild(d); }); L.scrollTop = L.scrollHeight; setChips(logs[botId].length ? (logs[botId].slice().reverse().find(m => m.who === 'bot') || {r:{}}).r.chips : []); }
+function setChips(c){ const box = $('chips'); box.textContent = ''; (c || []).forEach(t => { const b = el('button', 'chip', t); b.type = 'button'; b.onclick = () => send(t); box.appendChild(b); }); }
+function send(t){ t = String(t || '').trim(); if (!t) return; addMe(t.length > 600 ? t.slice(0, 600) + '…' : t); let r; try { r = bot.reply(t); } catch(e){ r = { text: 'Something went wrong in my rules. Try "help".', chips: ['help'] }; } addBot(r); if (tab !== 'chat') showTab('chat'); }
+$('chatform').addEventListener('submit', e => { e.preventDefault(); const v = $('inp').value; $('inp').value = ''; send(v); });
+$('inp').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('chatform').requestSubmit(); } });
+
+// ---------- lessons / progress ----------
+function renderLessons(){ const L = $('lessonList'); L.textContent = ''; const P = bot.progress(), B = FS.BOTS[botId]; [1,2,3,4].forEach(lv => { const h = el('h3', null, 'Level ' + lv + ': ' + B.levels[lv-1]); h.style.marginTop = '12px'; L.appendChild(h); FS.LESSONS[botId].filter(l => l.level === lv).forEach(l => { const d = el('div', 'lesson'); const left = el('div'); left.appendChild(el('div', null, l.n + '. ' + l.title)); left.appendChild(el('div', 'mute', l.goal)); const right = el('div'); right.style.cssText = 'display:flex;gap:8px;align-items:center'; right.appendChild(el('span', 'pill' + (P.done[l.id] != null ? ' done' : ''), P.done[l.id] != null ? 'done' : 'new')); const b = el('button', 'btn', 'Open'); b.type = 'button'; b.onclick = () => send('lesson ' + l.n); right.appendChild(b); d.appendChild(left); d.appendChild(right); L.appendChild(d); }); }); }
+function renderProgress(){
+  bot.reload(); const P = bot.progress(), n = Object.keys(P.done).length, lvl = FS.levelOf(P, botId), root = $('prog'); root.textContent = '';
+  root.appendChild(el('h2', null, 'Progress'));
+  const st = el('div', 'stat'); [[n + '/12','lessons done'],['L' + lvl,FS.BOTS[botId].levels[lvl-1]],[P.xp,'XP'],[P.streak,'day streak (best ' + P.best + ')']].forEach(([a,b]) => { const d = el('div'); d.appendChild(el('b', null, String(a))); d.appendChild(el('span', 'mute', b)); st.appendChild(d); }); root.appendChild(st);
+  root.appendChild(el('h3', null, 'Badges')).style.marginTop = '14px'; const bw = el('div'); FS.BADGES.forEach(b => { const has = P.badges.includes(b.id); const t = el('span', 'pill' + (has ? ' done' : ''), (has ? '✓ ' : '') + b.name); t.style.cssText = 'display:inline-block;margin:0 6px 6px 0'; bw.appendChild(t); }); root.appendChild(bw);
+  root.appendChild(el('h3', null, 'Recent quizzes')).style.marginTop = '10px'; const ul = el('ul', 'plain'); P.quizzes.slice(-6).reverse().forEach(q => ul.appendChild(el('li', null, q.d + ': ' + q.score + '/' + q.total + ' · ' + (q.label || 'quiz')))); if (!P.quizzes.length) ul.appendChild(el('li', null, 'None yet. Say "quiz me" in chat.')); root.appendChild(ul);
+  const b = el('button', 'btn', 'Reset progress'); b.type = 'button'; b.onclick = () => { send('reset progress'); }; root.appendChild(b);
+}
+
+// ---------- practice ----------
+$('pbuild').onclick = () => { const p = FS.practicePlan(botId, parseInt($('pmin').value, 10) || 20, FS.levelOf(bot.progress(), botId), $('pfocus').value.trim() || null); const r = $('plan'); r.textContent = ''; const ul = el('ol', 'plain'); p.items.forEach(x => ul.appendChild(el('li', null, x.min + ' min: ' + x.text))); r.appendChild(ul); p.rules.forEach(x => r.appendChild(el('div', 'mute', x))); };
+let warmTimer = null;
+$('wbuild').onclick = () => { const w = FS.buildWarmup(parseInt($('wmin').value, 10) || 8, FS.levelOf(bot.progress(), botId)), r = $('warm'); r.textContent = ''; r.appendChild(el('div', 'mute', 'About ' + w.minutes + ' minutes. Stay easy. Stop if anything hurts.'));
+  w.items.forEach(it => { const d = el('div'); d.style.cssText = 'border-top:1px solid var(--line);padding:10px 0'; d.appendChild(el('h3', null, it.name + ' · ' + it.min + ' min')); const ul = el('ul', 'plain'); it.steps.forEach(s => ul.appendChild(el('li', null, s))); d.appendChild(ul); if (it.pattern) { const b = el('button', 'btn', 'Play guide notes'); b.type = 'button'; b.onclick = () => { const c = ac(); if (!c) return; const t0 = c.currentTime + 0.1; it.pattern.forEach((o, i) => tone(60 + o, t0 + i * 0.7, 0.65, 'sine', 0.22)); }; d.appendChild(b); } r.appendChild(d); }); };
+let breath = null;
+function stopBreath(){ if (breath) { clearTimeout(breath); breath = null; } $('bgo').textContent = 'Start'; $('bnow').textContent = ' '; $('bsub').textContent = ''; }
+$('bgo').onclick = () => { if (breath) { stopBreath(); return; } const B = FS.BREATH[$('bsel').value]; let round = 0, ph = 0, left = B.phases[0][1]; $('bgo').textContent = 'Stop';
+  const tick = () => { const p = B.phases[ph]; $('bnow').textContent = p[0] + ' · ' + left; $('bsub').textContent = 'Round ' + (round + 1) + ' of ' + B.rounds + '. Stay relaxed; do not strain.'; left--; if (left < 0) { ph++; if (ph >= B.phases.length) { ph = 0; round++; } if (round >= B.rounds) { stopBreath(); $('bnow').textContent = 'Done'; breath = null; return; } left = B.phases[ph][1] - 0; left = B.phases[ph][1]; } breath = setTimeout(tick, 1000); }; tick(); };
+
+// ---------- tools ----------
+function toolsFor(id){ return id === 'singer' ? [['tuner','Pitch and vowel tuner (mic)'],['ear','Interval ear trainer'],['runs','Run builder'],['cons','Consonant coach']] : [['metro','Metronome and tap tempo'],['rhyme','Rhyme lab'],['grid','Flow grid'],['free','Freestyle prompter'],['bars','Bar timer']]; }
+$('toolSel').onchange = renderTool;
+let stopFns = []; function stopAll(){ stopFns.forEach(f => { try { f(); } catch(e){} }); stopFns = []; stopBreath(); }
+function renderTool(){ stopAll(); const b = $('toolBody'); b.textContent = ''; const v = $('toolSel').value; const f = { tuner: tTuner, ear: tEar, runs: tRuns, cons: tCons, metro: tMetro, rhyme: tRhyme, grid: tGrid, free: tFree, bars: tBars }[v]; if (f) f(b); }
+function card(b, title, sub){ const c = el('div', 'card'); c.appendChild(el('h2', null, title)); if (sub) c.appendChild(el('p', 'mute', sub)); b.appendChild(c); return c; }
+function lab(txt, input){ const l = el('label', null, txt); l.appendChild(input); return l; }
+function inputEl(type, id, val, attrs){ const i = el('input'); i.type = type; i.id = id; i.value = val; Object.assign(i, attrs || {}); return i; }
+function sel(id, opts, val){ const s = el('select'); s.id = id; opts.forEach(o => { const x = el('option', null, Array.isArray(o) ? o[1] : o); x.value = Array.isArray(o) ? o[0] : o; s.appendChild(x); }); if (val != null) s.value = val; return s; }
+
+// --- rapper tools
+function tRhyme(b){ const c = card(b, 'Rhyme lab', 'Spelling-based: it reads how a word is written, not how it sounds. My word bank is a few hundred clean words.'); const i = inputEl('text', 'rw', 'night'), go = el('button', 'btn pri', 'Find rhymes'); go.type = 'button'; const out = el('div'); c.appendChild(el('div', 'row')).append(lab('Word', i), go); c.appendChild(out);
+  const run = () => { out.textContent = ''; const w = i.value.trim().toLowerCase().replace(/[^a-z]/g, ''); if (!w) return; const r = FS.rhymesFor(w, 16); const sy = FS.syllabify(w); out.appendChild(el('p', 'mute', w + ': ' + sy.length + ' syllable(s). I read it as [' + FS.g2p(w).join(' ') + ']')); [['Perfect','perfect'],['Slant','slant'],['Near','near']].forEach(([l,k]) => { const d = el('div'); d.style.margin = '8px 0'; d.appendChild(el('h3', null, l)); (r[k].length ? r[k] : ['(none in my bank)']).forEach(x => d.appendChild(el('span', 'tag', x))); out.appendChild(d); }); };
+  go.onclick = run; i.onkeydown = e => { if (e.key === 'Enter') run(); }; run(); }
+const SAMPLE = "I spit it slow, let the rhythm flow\nWatching the lights as the city glow\nTold myself I would never fall\nStand up tall when they call my name";
+function tGrid(b){ const c = card(b, 'Flow grid', 'One bar per line. X = stressed syllable, shaded = unstressed. Each group of four cells is one beat. This is an estimate from spelling; say the line over a beat to check.'); const ta = el('textarea'); ta.id = 'fgIn'; ta.rows = 5; ta.value = SAMPLE; const go = el('button', 'btn pri', 'Analyze'); go.type = 'button'; go.style.marginTop = '8px'; const out = el('div'); c.append(ta, go, out);
+  const run = () => { out.textContent = ''; const v = FS.analyzeVerse(ta.value); v.bars.forEach((a, i) => { const h = el('div', 'mute', 'Bar ' + (i+1) + ' [' + v.scheme[i] + '] · ' + a.n + ' syllables · ' + a.density + (a.stressed ? ' · ' + a.onBeat + '/' + a.stressed + ' stressed on a beat' : '')); h.style.marginTop = '12px'; out.appendChild(h); const sc = el('div', 'scroll'), g = el('div', 'grid16'); for (let k = 0; k < 16; k++) { const cell = a.grid && a.grid[k]; const d = el('div', 'cell' + (k % 4 === 0 ? ' b' : '') + (cell ? (cell.stress ? ' s' : ' u') : ''), cell ? cell.t : ''); d.title = cell ? cell.t : 'rest'; g.appendChild(d); } sc.appendChild(g); out.appendChild(sc); a.notes.forEach(n => out.appendChild(el('div', 'mute', '• ' + n))); }); const tips = el('div'); tips.style.marginTop = '14px'; tips.appendChild(el('h3', null, 'Verse notes')); v.tips.forEach(t => tips.appendChild(el('p', null, t))); out.appendChild(tips); };
+  go.onclick = run; run(); }
+function tFree(b){ const c = card(b, 'Freestyle prompter', 'Press New prompt, or start the metronome tool first and use Auto to get fresh words every 4 bars.'); const out = el('div'); const go = el('button', 'btn pri', 'New prompt'); go.type = 'button'; const auto = el('button', 'btn', 'Auto: every 4 bars (10 s at 96 bpm)'); auto.type = 'button'; c.append(go, auto, out); let timer = null;
+  const mk = () => { out.textContent = ''; const kv = el('dl', 'kv'); [['Scene', FS.pick(FS.FREE_IMAGES)],['Theme', FS.pick(FS.FREE_THEMES)],['Words to land', FS.shuffle(FS.FREE_WORDS).slice(0,4).join(', ')],['Rhyme family', FS.pick(['-ine','-ight','-ow','-ay','-ame','-ound','-ing'])]].forEach(([k,v]) => { kv.appendChild(el('dt', null, k)); kv.appendChild(el('dd', null, v)); }); out.appendChild(kv); };
+  go.onclick = mk; auto.onclick = () => { if (timer) { clearInterval(timer); timer = null; auto.textContent = 'Auto: every 4 bars (10 s at 96 bpm)'; return; } mk(); timer = setInterval(mk, 10000); auto.textContent = 'Stop auto'; }; stopFns.push(() => { if (timer) clearInterval(timer); }); mk(); }
+function tBars(b){ const c = card(b, 'Bar timer'); const bp = inputEl('number', 'bt', 90, { min: 50, max: 200 }); const out = el('div'); c.append(lab('BPM', bp), out); const run = () => { const v = Math.max(50, Math.min(200, parseInt(bp.value, 10) || 90)); out.textContent = ''; const kv = el('dl', 'kv'); [['1 bar', FS.barSeconds(v).toFixed(2) + ' s'],['4 bars', FS.verseSeconds(v,4).toFixed(1) + ' s'],['16 bars', FS.verseSeconds(v,16).toFixed(1) + ' s'],['One beat', FS.beatMs(v).toFixed(0) + ' ms'],['One 16th note', (FS.beatMs(v)/4).toFixed(0) + ' ms'],['8 / 12 / 16 syllables per bar', [8,12,16].map(n => FS.sylPerSecond(n, v).toFixed(1)).join(' / ') + ' per second']].forEach(([k,x]) => { kv.appendChild(el('dt', null, k)); kv.appendChild(el('dd', null, x)); }); out.appendChild(kv); }; bp.oninput = run; run(); }
+function tMetro(b){ const c = card(b, 'Metronome', 'Count bars out loud. Swing delays the off-beat 16th notes, so you can feel the pocket change. Sound starts when you press Start.'); const bpm = inputEl('number', 'mb', 90, { min: 50, max: 180 }), sw = inputEl('number', 'ms', 0, { min: 0, max: 60 }), go = el('button', 'btn pri', 'Start'); go.type = 'button'; const tap = el('button', 'btn', 'Tap tempo'); tap.type = 'button';
+  const r = el('div', 'row'); r.append(lab('BPM', bpm), lab('Swing %', sw), go, tap); c.appendChild(r); const dots = el('div', 'dots'); const ds = [0,1,2,3].map(i => { const d = el('div', 'dot'); dots.appendChild(d); return d; }); c.appendChild(dots); const bar = el('div', 'big', '—'); c.appendChild(bar); const note = el('div', 'mute', 'Bar counter runs 1 to 16. Subdivisions: ticks on beats, softer ticks on the off-beat 16ths.'); c.appendChild(note);
+  let run = null, next = 0, step = 0, barN = 0, timer = null; const taps = [];
+  const sched = () => { const cx = ac(); if (!cx) return; const B = Math.max(50, Math.min(180, parseInt(bpm.value, 10) || 90)), sp = 60 / B / 4, swing = (parseInt(sw.value, 10) || 0) / 100; while (next < cx.currentTime + 0.15) { const s = step % 16, off = (s % 2 === 1) ? swing * sp : 0, t = next + off; if (s % 4 === 0) { click(t, s === 0); const beat = s / 4, bn = barN, d = ds[beat]; setTimeout(() => { ds.forEach((x, i) => x.classList.toggle('on', i === beat)); bar.textContent = 'Bar ' + (bn % 16 + 1); }, Math.max(0, (t - cx.currentTime) * 1000)); } else if (s % 2 === 0) click(t, false); step++; if (step % 16 === 0) barN++; next += sp; } };
+  const stop = () => { if (timer) clearInterval(timer); timer = null; go.textContent = 'Start'; ds.forEach(x => x.classList.remove('on')); }; stopFns.push(stop);
+  go.onclick = () => { if (timer) { stop(); return; } const cx = ac(); if (!cx) { note.textContent = 'Audio is not available in this browser.'; return; } next = cx.currentTime + 0.1; step = 0; barN = 0; timer = setInterval(sched, 25); go.textContent = 'Stop'; sched(); };
+  tap.onclick = () => { const now = performance.now(); if (taps.length && now - taps[taps.length-1] > 2000) taps.length = 0; taps.push(now); if (taps.length > 8) taps.shift(); const t = FS.tapTempo(taps); if (t) bpm.value = Math.max(50, Math.min(180, t)); }; }
+
+// --- singer tools
+function tCons(b){ const c = card(b, 'Consonant coach', 'Type a word. I split it into syllables from its spelling and tell you how to handle the consonants when you sing it. Estimates can be wrong on unusual words.'); const i = inputEl('text', 'cw', 'beautiful'), go = el('button', 'btn pri', 'Coach me'); go.type = 'button'; const out = el('div'); const r = el('div', 'row'); r.append(lab('Word', i), go); c.append(r, out);
+  const run = () => { out.textContent = ''; const w = i.value.trim().toLowerCase().replace(/[^a-z]/g, ''); if (!w) return; out.appendChild(el('p', 'mute', 'I read it as [' + FS.g2p(w).join(' ') + ']')); FS.coachWord(w).forEach(s => { const d = el('div'); d.style.cssText = 'border-top:1px solid var(--line);padding:8px 0'; d.appendChild(el('h3', null, 'Syllable ' + s.idx + ' · vowel ' + s.vowel + (s.stress ? ' · stressed' : '') + (s.holdable ? ' · good to hold' : ''))); d.appendChild(el('div', 'mute', 'Start: ' + (s.onset.map(x => x.t + ' (' + x.c.join(', ') + ')').join(' + ') || 'vowel') + '   End: ' + (s.coda.map(x => x.t + ' (' + x.c.join(', ') + ')').join(' + ') || 'vowel'))); s.tips.forEach(t => d.appendChild(el('div', null, t))); out.appendChild(d); }); };
+  go.onclick = run; i.onkeydown = e => { if (e.key === 'Enter') run(); }; run(); }
+function tRuns(b){ const c = card(b, 'Run builder', 'Short stepwise runs inside one octave, built to land on a held note. Learn it slowly on one vowel before you speed it up.'); const scale = sel('rs', [['major pentatonic','Major pentatonic'],['minor pentatonic','Minor pentatonic'],['blues','Blues']]), lv = sel('rl', [['1','Easy (4 notes)'],['2','Medium (6)'],['3','Hard (8)']]), dir = sel('rd', [['up','Up'],['down','Down'],['wave','Up and down']]), bpm = inputEl('number', 'rb', 60, { min: 40, max: 120 }); const gen = el('button', 'btn pri', 'New run'), play = el('button', 'btn', 'Play'); gen.type = play.type = 'button'; const r = el('div', 'row'); r.append(lab('Scale', scale), lab('Level', lv), lab('Direction', dir), lab('BPM (one note per beat)', bpm), gen, play); c.appendChild(r); const out = el('div'); out.style.marginTop = '10px'; c.appendChild(out); let cur = null;
+  const mk = () => { cur = FS.genRun({ tonic: 60, scale: scale.value, level: parseInt(lv.value, 10), dir: dir.value }); out.textContent = ''; const big = el('div', 'big', cur.names.join(' ')); big.style.cssText = 'font-size:24px;line-height:1.3;overflow-wrap:anywhere'; out.appendChild(big); out.appendChild(el('p', 'mute', 'In C, ' + cur.scale + ', ' + cur.dir + '. Then hold the last note.')); const ul = el('ul', 'plain'); cur.tips.forEach(t => ul.appendChild(el('li', null, t))); out.appendChild(ul); };
+  gen.onclick = mk; play.onclick = () => { if (!cur) mk(); const cx = ac(); if (!cx) return; const B = Math.max(40, Math.min(120, parseInt(bpm.value, 10) || 60)), d = 60 / B, t0 = cx.currentTime + 0.1; cur.notes.forEach((n, i) => tone(n, t0 + i * d, d * 0.9, 'triangle', 0.25)); const last = cur.notes[cur.notes.length - 1]; tone(last, t0 + cur.notes.length * d, d * 2, 'triangle', 0.22); }; mk(); }
+let eq = null;
+function tEar(b){ const c = card(b, 'Interval ear trainer', 'Listen to two notes, then choose the interval. Start with small sets.'); const max = sel('em', [['7','Up to a 5th'],['12','Up to an octave']], '7'); const play = el('button', 'btn pri', 'New interval'), again = el('button', 'btn', 'Hear it again'); play.type = again.type = 'button'; const r = el('div', 'row'); r.append(lab('Range', max), play, again); c.appendChild(r); const ans = el('div'); ans.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;margin:12px 0'; c.appendChild(ans); const fb = el('div', null, 'Press New interval to begin.'); c.appendChild(fb); let score = 0, tries = 0; const sc = el('div', 'mute', 'Score 0/0'); c.appendChild(sc);
+  const hear = () => { if (!eq) return; const cx = ac(); if (!cx) { fb.textContent = 'Audio is not available in this browser.'; return; } const t0 = cx.currentTime + 0.1; tone(eq.low, t0, 0.8, 'triangle', 0.25); tone(eq.high, t0 + 1, 0.8, 'triangle', 0.25); };
+  const mk = () => { eq = FS.intervalQuestion(parseInt(max.value, 10)); fb.textContent = 'What interval did you hear?'; ans.textContent = ''; FS.INTERVALS.filter(i => i.n > 0 && i.n <= parseInt(max.value, 10)).forEach(i => { const bt = el('button', 'chip', i.name); bt.type = 'button'; bt.onclick = () => { tries++; const ok = i.n === eq.answer; if (ok) score++; fb.textContent = (ok ? 'Correct. ' : 'Not quite. ') + 'It was a ' + eq.name + ' (' + eq.answer + ' semitones, ' + FS.midiName(eq.low) + ' up to ' + eq.note + ').' + (FS.INTERVAL_SONG_HINTS && FS.INTERVAL_SONG_HINTS[eq.answer] ? ' ' + FS.INTERVAL_SONG_HINTS[eq.answer] : ''); sc.textContent = 'Score ' + score + '/' + tries; }; ans.appendChild(bt); }); hear(); };
+  play.onclick = mk; again.onclick = hear; }
+function tTuner(b){ const c = card(b, 'Pitch and vowel tuner', 'Sing one steady vowel. You see your note, how many cents sharp or flat, and a rough vowel guess from F1 and F2. Formant readings are estimates and work best below about 260 Hz; they can lock onto harmonics on higher notes. Young voices have higher formants than the adult reference values used here.'); const go = el('button', 'btn pri', 'Start mic'); go.type = 'button'; const st = el('div', 'mute', 'Idle. The microphone only works if your browser allows it on this page.'); c.append(go, st); const note = el('div', 'big', '—'); const m = el('div', 'meter'); m.appendChild(el('b')); const needle = el('i'); m.appendChild(needle); const kv = el('dl', 'kv'); c.append(note, m, kv);
+  let stream = null, an = null, timer = null, src = null; const stop = () => { if (timer) clearInterval(timer); timer = null; if (stream) stream.getTracks().forEach(t => t.stop()); stream = null; try { src && src.disconnect(); } catch(e){} src = null; go.textContent = 'Start mic'; }; stopFns.push(stop);
+  const REF = [['ee',300,2300],['eh',550,1900],['ah',750,1200],['oh',500,900],['oo',320,850]];
+  go.onclick = async () => { if (stream) { stop(); st.textContent = 'Stopped.'; return; } try { if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('no'); const cx = ac(); stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } }); src = cx.createMediaStreamSource(stream); an = cx.createAnalyser(); an.fftSize = 4096; src.connect(an); go.textContent = 'Stop mic'; st.textContent = 'Listening. Sing a steady vowel.'; const buf = new Float32Array(an.fftSize), hist = [];
+      timer = setInterval(() => { an.getFloatTimeDomainData(buf); const r = DSP.analyze(buf, cx.sampleRate); if (!r.voiced || !r.f0) { return; } hist.push(r); if (hist.length > 5) hist.shift(); const med = k => { const a = hist.map(x => x[k]).filter(Boolean).sort((p,q) => p-q); return a.length ? a[Math.floor(a.length/2)] : null; }; const f0 = med('f0'), F1 = med('F1'), F2 = med('F2'), n = FS.hzToNote(f0); if (!n) return; note.textContent = n.name + ' ' + (n.cents >= 0 ? '+' : '') + n.cents + '¢'; needle.style.left = (50 + Math.max(-50, Math.min(50, n.cents))) * 0.98 + '%'; kv.textContent = ''; const add = (k, v) => { kv.appendChild(el('dt', null, k)); kv.appendChild(el('dd', null, v)); }; add('Pitch', f0.toFixed(1) + ' Hz'); if (F1 && F2 && f0 < 330) { let best = null, bd = 1e9; REF.forEach(rf => { const d = Math.hypot((F1 - rf[1]) / 150, (F2 - rf[2]) / 500); if (d < bd) { bd = d; best = rf[0]; } }); add('F1 / F2', Math.round(F1) + ' / ' + Math.round(F2) + ' Hz'); add('Closest vowel', best + ' (rough guess)'); } else add('Formants', f0 >= 330 ? 'not shown: pitch is too high for a reliable reading' : 'not clear yet'); }, 80);
+    } catch (e) { stop(); st.textContent = 'This page cannot use the microphone here (blocked by the viewer or by permission). Open the downloaded standalone file in your browser, or use the other tools.'; } }; }
+
+// ---------- boot ----------
+setBot(botId);
+})();
+</script>

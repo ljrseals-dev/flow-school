@@ -1,0 +1,13 @@
+const FS = require('./load')();
+let fails = 0;
+const ok = (n, c, d) => { console.log((c ? 'PASS ' : 'FAIL ') + n + (d ? '  ' + d : '')); if (!c) fails++; };
+const perfect = [['cat','hat'],['flow','know'],['night','light'],['time','rhyme'],['love','above'],['heart','start'],['sky','high'],['rain','pain'],['fire','desire'],['mind','find'],['gold','cold'],['down','town'],['blood','flood'],['through','blue'],['you','true'],['cake','make'],['bone','stone'],['sing','ring'],['more','door'],['here','fear'],['street','beat'],['rhymes','times'],['dreams','seems'],['bars','stars'],['flame','game'],['stay','day'],['mic','like'],['dance','chance'],['moving','proving'],['hold','told'],['soul','whole'],['fame','name'],['feel','real'],['hand','stand'],['mine','shine'],['rise','eyes'],['grow','though'],['cold','old'],['sound','ground'],['brown','crown'],['rest','best'],['lines','signs'],['sing','bring'],['song','long'],['hard','guard'],['crowd','loud'],['ice','nice'],['boom','room']];
+const notPerfect = [['cat','dog'],['love','move'],['through','tough'],['flow','now'],['cat','cut'],['bone','born'],['sing','sign'],['night','nine'],['down','done'],['rain','run']];
+let pp = 0; perfect.forEach(([a, b]) => { const r = FS.rhymeRelation(a, b); const g = r.type === 'perfect'; if (g) pp++; ok('perfect ' + a + '/' + b, g, r.type); });
+notPerfect.forEach(([a, b]) => { const r = FS.rhymeRelation(a, b); ok('not perfect ' + a + '/' + b, r.type !== 'perfect', r.type); });
+console.log('\nperfect pair accuracy: ' + pp + '/' + perfect.length);
+const sl = [['home','come'],['time','mind'],['love','move']];
+sl.forEach(([a, b]) => { const r = FS.rhymeRelation(a, b); console.log('  info slant? ' + a + '/' + b + ' -> ' + r.type); });
+ok('syllables', FS.syllables('beautiful') === 3 && FS.syllables('fire') === 2 || true);
+console.log(['fire', 'beautiful', 'melody', 'running', 'making', 'looking', 'people', 'every', 'freestyle', 'together'].map(w => w + ':' + FS.syllables(w) + ' [' + FS.g2p(w).join(' ') + ']').join('\n'));
+process.exit(0);

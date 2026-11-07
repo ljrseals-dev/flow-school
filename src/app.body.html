@@ -1,0 +1,241 @@
+<title>FlowSchool</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,500..800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one column app shell. Sticky header with bot switch, tab strip, one working panel at a time. */
+:root{
+  --bg:#f5f3ef; --panel:#ffffff; --fg:#1d1b19; --mute:#6a655e; --line:#dcd7cf; --soft:#ece8e1;
+  --accent:#b4571b; --accent-fg:#ffffff; --accent-soft:#f6e4d6; --ok:#2f7d4f; --warn:#a8630a; --bad:#b3372e;
+  --f-display:"Archivo","Arial Narrow",Arial,sans-serif; --f-body:"IBM Plex Sans",system-ui,sans-serif; --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+:root[data-bot="rapper"]{ --accent:#14636b; --accent-soft:#d9ecee; }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#171614; --panel:#201f1c; --fg:#ece8e1; --mute:#a39d93; --line:#38352f; --soft:#2a2823;
+  --accent:#e08a4b; --accent-fg:#1a1006; --accent-soft:#3a2819; --ok:#6cc08a; --warn:#e0a24a; --bad:#ef7a70; color-scheme:dark; }
+  :root[data-bot="rapper"]:not([data-theme="light"]){ --accent:#5fc0c8; --accent-fg:#06191b; --accent-soft:#14363a; } }
+:root[data-theme="dark"]{ --bg:#171614; --panel:#201f1c; --fg:#ece8e1; --mute:#a39d93; --line:#38352f; --soft:#2a2823;
+  --accent:#e08a4b; --accent-fg:#1a1006; --accent-soft:#3a2819; --ok:#6cc08a; --warn:#e0a24a; --bad:#ef7a70; color-scheme:dark; }
+:root[data-theme="dark"][data-bot="rapper"]{ --accent:#5fc0c8; --accent-fg:#06191b; --accent-soft:#14363a; }
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:15px/1.5 var(--f-body);padding-inline:max(16px,env(safe-area-inset-left,0px)) max(16px,env(safe-area-inset-right,0px));padding-block:0 28px}
+.wrap{max-width:860px;margin:0 auto}
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding:12px 0 8px;border-bottom:1px solid var(--line)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.top{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+h1{font:800 22px/1 var(--f-display);font-stretch:80%;letter-spacing:.01em;margin:0;text-wrap:balance}
+.sub{color:var(--mute);font-size:13px;margin:2px 0 0}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--panel)}
+.seg button{border:0;background:transparent;color:var(--fg);padding:8px 14px;font:600 14px var(--f-body);cursor:pointer;min-height:40px}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-fg)}
+nav{display:flex;gap:2px;overflow-x:auto;margin-top:10px;scrollbar-width:thin}
+nav button{border:0;border-bottom:3px solid transparent;background:transparent;color:var(--mute);padding:8px 12px;font:600 14px var(--f-body);cursor:pointer;white-space:nowrap}
+nav button[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--accent)}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+main{padding-top:16px}
+section[hidden]{display:none}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px;min-width:0}
+h2{font:700 18px/1.2 var(--f-display);font-stretch:85%;margin:0 0 8px;text-wrap:balance}
+h3{font:700 15px/1.2 var(--f-body);margin:0 0 6px}
+.mute{color:var(--mute);font-size:13px}
+.btn{border:1px solid var(--line);background:var(--panel);color:var(--fg);border-radius:8px;padding:8px 12px;font:600 14px var(--f-body);cursor:pointer;min-height:40px}
+.btn:hover{border-color:var(--accent)}
+.btn.pri{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.btn:disabled{opacity:.5;cursor:default}
+.chip{border:1px solid var(--line);background:var(--soft);color:var(--fg);border-radius:999px;padding:6px 12px;font:500 13px var(--f-body);cursor:pointer}
+.chip:hover{border-color:var(--accent)}
+input[type=text],input[type=number],select,textarea{background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:9px 10px;font:15px var(--f-body);min-height:40px;max-width:100%}
+textarea{width:100%;resize:vertical;font-family:var(--f-mono);font-size:14px}
+label{font-size:13px;color:var(--mute);display:flex;flex-direction:column;gap:3px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+/* chat */
+#log{display:flex;flex-direction:column;gap:10px;min-height:260px;max-height:58vh;overflow-y:auto;padding:4px 2px}
+.msg{flex-shrink:0;max-width:92%;padding:10px 12px;border-radius:10px;white-space:pre-wrap;overflow-wrap:anywhere;border:1px solid var(--line)}
+.msg.bot{background:var(--panel);align-self:flex-start}
+.msg.me{background:var(--accent-soft);align-self:flex-end}
+.msg.pre{font-family:var(--f-mono);font-size:13px;line-height:1.55;overflow-x:auto;white-space:pre}
+.msg .x{display:block;margin-top:8px;white-space:pre-wrap;font-family:var(--f-body);font-size:14px;color:var(--mute)}
+#chips{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}
+#chatform{display:flex;gap:8px;align-items:flex-end}
+#chatform textarea{flex:1;min-height:44px;font-family:var(--f-body)}
+.notice{border-left:3px solid var(--accent);padding:6px 10px;background:var(--soft);font-size:13px;color:var(--mute);margin-bottom:12px}
+/* lessons */
+.lesson{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid var(--line)}
+.lesson:first-of-type{border-top:0}
+.pill{font-size:12px;font-weight:600;border-radius:999px;padding:2px 8px;background:var(--soft);color:var(--mute);white-space:nowrap}
+.pill.done{background:var(--accent-soft);color:var(--accent)}
+/* tools */
+.grid16{display:grid;grid-template-columns:repeat(16,minmax(46px,1fr));gap:2px;min-width:760px;font:11px var(--f-mono)}
+.cell{border:1px solid var(--line);border-radius:4px;min-height:34px;padding:2px;overflow:hidden;text-overflow:clip;white-space:nowrap;background:var(--panel)}
+.cell.b{border-color:var(--accent)}
+.cell.s{background:var(--accent);color:var(--accent-fg);font-weight:600}
+.cell.u{background:var(--soft)}
+.scroll{overflow-x:auto;padding-bottom:4px}
+.dots{display:flex;gap:10px;margin:10px 0}
+.dot{width:34px;height:34px;border-radius:50%;border:2px solid var(--line);background:var(--panel)}
+.dot.on{background:var(--accent);border-color:var(--accent)}
+.meter{position:relative;height:14px;border-radius:7px;background:var(--soft);border:1px solid var(--line);margin:8px 0}
+.meter i{position:absolute;top:-3px;width:4px;height:18px;background:var(--accent);border-radius:2px;left:50%}
+.meter b{position:absolute;left:50%;top:0;width:1px;height:100%;background:var(--mute)}
+.big{font:800 40px/1 var(--f-display);font-stretch:80%}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:14px}
+.kv dt{color:var(--mute)}.kv dd{margin:0;font-variant-numeric:tabular-nums}
+ul.plain{margin:6px 0;padding-left:18px}
+.tag{font:500 12px var(--f-mono);background:var(--soft);border-radius:4px;padding:1px 6px;margin-right:4px;display:inline-block}
+.stat{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.stat div{background:var(--soft);border-radius:8px;padding:10px}
+.stat b{display:block;font:800 26px/1.1 var(--f-display);font-stretch:80%;font-variant-numeric:tabular-nums}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div class="wrap">
+<header>
+  <div class="top">
+    <div><h1 id="title">FlowSchool</h1><p class="sub" id="tag"></p></div>
+    <div class="seg" role="group" aria-label="Choose coach"><button id="bs" type="button" aria-pressed="true">SingerFlow</button><button id="br" type="button" aria-pressed="false">BiggieFlow</button></div>
+  </div>
+  <nav role="tablist" id="tabs"></nav>
+</header>
+<main>
+  <section id="p-chat">
+    <div class="notice">Runs offline on this page: rule-based, no AI model, no internet needed. <span id="vizNote"></span></div>
+    <div class="card"><div id="log" aria-live="polite"></div><div id="chips"></div>
+      <form id="chatform"><textarea id="inp" rows="1" placeholder="Ask a question, type a command, or paste bars (Shift+Enter for a new line)" aria-label="Message"></textarea><button class="btn pri" type="submit">Send</button></form></div>
+  </section>
+  <section id="p-lessons" hidden><div class="card"><h2>Course</h2><p class="mute">Twelve lessons in four levels. Open a lesson, then say "check" for its checkpoint.</p><div id="lessonList"></div></div></section>
+  <section id="p-tools" hidden>
+    <div class="card"><label for="toolSel">Tool<select id="toolSel"></select></label></div>
+    <div id="toolBody"></div>
+  </section>
+  <section id="p-practice" hidden>
+    <div class="card"><h2>Practice plan</h2><div class="row"><label for="pmin">Minutes<input id="pmin" type="number" min="10" max="90" value="20"></label><label for="pfocus">Focus (optional)<input id="pfocus" type="text" placeholder="e.g. internal rhyme"></label><button id="pbuild" class="btn pri" type="button">Build plan</button></div><div id="plan"></div></div>
+    <div class="card" id="warmCard"><h2>Warm-up builder</h2><div class="row"><label for="wmin">Minutes<input id="wmin" type="number" min="4" max="20" value="8"></label><button id="wbuild" class="btn pri" type="button">Build warm-up</button></div><div id="warm"></div></div>
+    <div class="card"><h2>Breath timer</h2><div class="row"><label for="bsel">Pattern<select id="bsel"></select></label><button id="bgo" class="btn pri" type="button">Start</button></div><div class="big" id="bnow" aria-live="polite">&nbsp;</div><div class="mute" id="bsub"></div></div>
+    <div class="card"><h2>Safety</h2><ul class="plain" id="safe"></ul><p class="mute">General guidance, not medical advice. A doctor and a voice teacher know you best.</p></div>
+  </section>
+  <section id="p-progress" hidden><div class="card" id="prog"></div></section>
+  <section id="p-about" hidden><div class="card"><h2 id="aboutH">About</h2><p id="aboutT"></p><p class="mute">Spelling-based heuristics can be wrong on names, slang and unusual words. Lessons draw on general vocal-health guidance (for example Johns Hopkins Medicine's vocal hygiene sheet for singers and Furtado's School of Music tips for young singers) and common music-teaching practice. Reference artists are style inspirations only: nothing here clones or imitates anyone's voice or reproduces lyrics.</p><p class="mute">Your progress is saved only in this browser, if your browser allows it.</p></div></section>
+</main>
+</div>
+
+<script>
+/*__ENGINE__*/
+/*__DSP__*/
+(function(){
+'use strict';
+const $ = id => document.getElementById(id);
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+const mem = {};
+const store = { get(k){ try { const v = localStorage.getItem(k); if (v) return JSON.parse(v); } catch(e){} return mem[k] || null; }, set(k,v){ mem[k] = v; try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} } };
+let botId = 'singer', bot = null; const bots = {}, logs = {};
+try { const b = localStorage.getItem('flowschool:last'); if (b === 'rapper') botId = 'rapper'; } catch(e){}
+const TABS = [['chat','Chat'],['lessons','Lessons'],['tools','Tools'],['practice','Practice'],['progress','Progress'],['about','About']];
+let tab = 'chat';
+
+// ---------- audio ----------
+let ctx = null; const ac = () => { if (!ctx) { const C = window.AudioContext || window.webkitAudioContext; if (!C) return null; ctx = new C(); } if (ctx.state === 'suspended') ctx.resume(); return ctx; };
+function tone(midi, t0, dur, type, gain){ const c = ac(); if (!c) return; const o = c.createOscillator(), g = c.createGain(); o.type = type || 'triangle'; o.frequency.value = FS.midiToHz(midi); g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(gain || 0.25, t0 + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur); o.connect(g); g.connect(c.destination); o.start(t0); o.stop(t0 + dur + 0.05); }
+function click(t0, accent, swing){ const c = ac(); if (!c) return; const o = c.createOscillator(), g = c.createGain(); o.frequency.value = accent ? 1400 : 900; g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.3, t0 + 0.002); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.06); o.connect(g); g.connect(c.destination); o.start(t0); o.stop(t0 + 0.08); }
+
+// ---------- shell ----------
+function mountTabs(){ const n = $('tabs'); n.textContent = ''; TABS.forEach(([id, label]) => { const b = el('button', null, label); b.type = 'button'; b.setAttribute('role','tab'); b.setAttribute('aria-selected', String(id === tab)); b.onclick = () => showTab(id); n.appendChild(b); }); }
+function showTab(id){ tab = id; TABS.forEach(([t]) => { $('p-' + t).hidden = t !== id; }); mountTabs(); if (id === 'lessons') renderLessons(); if (id === 'progress') renderProgress(); if (id === 'tools') renderTool(); stopAll(); }
+function setBot(id){
+  stopAll(); botId = id; try { localStorage.setItem('flowschool:last', id); } catch(e){}
+  if (!bots[id]) { bots[id] = FS.createBot(id, store); logs[id] = []; }
+  bot = bots[id]; document.documentElement.setAttribute('data-bot', id);
+  const B = FS.BOTS[id]; $('title').textContent = B.name; $('tag').textContent = B.tagline;
+  $('bs').setAttribute('aria-pressed', String(id === 'singer')); $('br').setAttribute('aria-pressed', String(id === 'rapper'));
+  $('warmCard').hidden = id !== 'singer'; $('aboutH').textContent = 'About ' + B.name; $('aboutT').textContent = B.about;
+  $('vizNote').textContent = id === 'singer' ? 'Mic tools work only when your browser allows the microphone.' : '';
+  const ts = $('toolSel'); ts.textContent = ''; toolsFor(id).forEach(t => { const o = el('option', null, t[1]); o.value = t[0]; ts.appendChild(o); });
+  const bs = $('bsel'); bs.textContent = ''; Object.keys(FS.BREATH).forEach(k => { const o = el('option', null, FS.BREATH[k].name); o.value = k; bs.appendChild(o); });
+  const sf = $('safe'); sf.textContent = ''; FS.VOICE_SAFETY.forEach(s => sf.appendChild(el('li', null, s)));
+  $('plan').textContent = ''; $('warm').textContent = '';
+  renderLog(); if (!logs[id].length) addBot(bot.greet());
+  showTab(tab);
+}
+$('bs').onclick = () => setBot('singer'); $('br').onclick = () => setBot('rapper');
+
+// ---------- chat ----------
+function addBot(r){ logs[botId].push({ who: 'bot', r }); renderLog(); setChips(r.chips); }
+function addMe(t){ logs[botId].push({ who: 'me', t }); renderLog(); }
+function renderLog(){ const L = $('log'); L.textContent = ''; logs[botId].slice(-60).forEach(m => { const d = el('div', 'msg ' + m.who); if (m.who === 'me') d.textContent = m.t; else { const p = el('div'); p.textContent = m.r.text; d.appendChild(p); if (m.r.pre) d.classList.add('pre'); if (m.r.extra) d.appendChild(el('span', 'x', m.r.extra)); } L.appendChild(d); }); L.scrollTop = L.scrollHeight; setChips(logs[botId].length ? (logs[botId].slice().reverse().find(m => m.who === 'bot') || {r:{}}).r.chips : []); }
+function setChips(c){ const box = $('chips'); box.textContent = ''; (c || []).forEach(t => { const b = el('button', 'chip', t); b.type = 'button'; b.onclick = () => send(t); box.appendChild(b); }); }
+function send(t){ t = String(t || '').trim(); if (!t) return; addMe(t.length > 600 ? t.slice(0, 600) + '…' : t); let r; try { r = bot.reply(t); } catch(e){ r = { text: 'Something went wrong in my rules. Try "help".', chips: ['help'] }; } addBot(r); if (tab !== 'chat') showTab('chat'); }
+$('chatform').addEventListener('submit', e => { e.preventDefault(); const v = $('inp').value; $('inp').value = ''; send(v); });
+$('inp').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('chatform').requestSubmit(); } });
+
+// ---------- lessons / progress ----------
+function renderLessons(){ const L = $('lessonList'); L.textContent = ''; const P = bot.progress(), B = FS.BOTS[botId]; [1,2,3,4].forEach(lv => { const h = el('h3', null, 'Level ' + lv + ': ' + B.levels[lv-1]); h.style.marginTop = '12px'; L.appendChild(h); FS.LESSONS[botId].filter(l => l.level === lv).forEach(l => { const d = el('div', 'lesson'); const left = el('div'); left.appendChild(el('div', null, l.n + '. ' + l.title)); left.appendChild(el('div', 'mute', l.goal)); const right = el('div'); right.style.cssText = 'display:flex;gap:8px;align-items:center'; right.appendChild(el('span', 'pill' + (P.done[l.id] != null ? ' done' : ''), P.done[l.id] != null ? 'done' : 'new')); const b = el('button', 'btn', 'Open'); b.type = 'button'; b.onclick = () => send('lesson ' + l.n); right.appendChild(b); d.appendChild(left); d.appendChild(right); L.appendChild(d); }); }); }
+function renderProgress(){
+  bot.reload(); const P = bot.progress(), n = Object.keys(P.done).length, lvl = FS.levelOf(P, botId), root = $('prog'); root.textContent = '';
+  root.appendChild(el('h2', null, 'Progress'));
+  const st = el('div', 'stat'); [[n + '/12','lessons done'],['L' + lvl,FS.BOTS[botId].levels[lvl-1]],[P.xp,'XP'],[P.streak,'day streak (best ' + P.best + ')']].forEach(([a,b]) => { const d = el('div'); d.appendChild(el('b', null, String(a))); d.appendChild(el('span', 'mute', b)); st.appendChild(d); }); root.appendChild(st);
+  root.appendChild(el('h3', null, 'Badges')).style.marginTop = '14px'; const bw = el('div'); FS.BADGES.forEach(b => { const has = P.badges.includes(b.id); const t = el('span', 'pill' + (has ? ' done' : ''), (has ? '✓ ' : '') + b.name); t.style.cssText = 'display:inline-block;margin:0 6px 6px 0'; bw.appendChild(t); }); root.appendChild(bw);
+  root.appendChild(el('h3', null, 'Recent quizzes')).style.marginTop = '10px'; const ul = el('ul', 'plain'); P.quizzes.slice(-6).reverse().forEach(q => ul.appendChild(el('li', null, q.d + ': ' + q.score + '/' + q.total + ' · ' + (q.label || 'quiz')))); if (!P.quizzes.length) ul.appendChild(el('li', null, 'None yet. Say "quiz me" in chat.')); root.appendChild(ul);
+  const b = el('button', 'btn', 'Reset progress'); b.type = 'button'; b.onclick = () => { send('reset progress'); }; root.appendChild(b);
+}
+
+// ---------- practice ----------
+$('pbuild').onclick = () => { const p = FS.practicePlan(botId, parseInt($('pmin').value, 10) || 20, FS.levelOf(bot.progress(), botId), $('pfocus').value.trim() || null); const r = $('plan'); r.textContent = ''; const ul = el('ol', 'plain'); p.items.forEach(x => ul.appendChild(el('li', null, x.min + ' min: ' + x.text))); r.appendChild(ul); p.rules.forEach(x => r.appendChild(el('div', 'mute', x))); };
+let warmTimer = null;
+$('wbuild').onclick = () => { const w = FS.buildWarmup(parseInt($('wmin').value, 10) || 8, FS.levelOf(bot.progress(), botId)), r = $('warm'); r.textContent = ''; r.appendChild(el('div', 'mute', 'About ' + w.minutes + ' minutes. Stay easy. Stop if anything hurts.'));
+  w.items.forEach(it => { const d = el('div'); d.style.cssText = 'border-top:1px solid var(--line);padding:10px 0'; d.appendChild(el('h3', null, it.name + ' · ' + it.min + ' min')); const ul = el('ul', 'plain'); it.steps.forEach(s => ul.appendChild(el('li', null, s))); d.appendChild(ul); if (it.pattern) { const b = el('button', 'btn', 'Play guide notes'); b.type = 'button'; b.onclick = () => { const c = ac(); if (!c) return; const t0 = c.currentTime + 0.1; it.pattern.forEach((o, i) => tone(60 + o, t0 + i * 0.7, 0.65, 'sine', 0.22)); }; d.appendChild(b); } r.appendChild(d); }); };
+let breath = null;
+function stopBreath(){ if (breath) { clearTimeout(breath); breath = null; } $('bgo').textContent = 'Start'; $('bnow').textContent = ' '; $('bsub').textContent = ''; }
+$('bgo').onclick = () => { if (breath) { stopBreath(); return; } const B = FS.BREATH[$('bsel').value]; let round = 0, ph = 0, left = B.phases[0][1]; $('bgo').textContent = 'Stop';
+  const tick = () => { const p = B.phases[ph]; $('bnow').textContent = p[0] + ' · ' + left; $('bsub').textContent = 'Round ' + (round + 1) + ' of ' + B.rounds + '. Stay relaxed; do not strain.'; left--; if (left < 0) { ph++; if (ph >= B.phases.length) { ph = 0; round++; } if (round >= B.rounds) { stopBreath(); $('bnow').textContent = 'Done'; breath = null; return; } left = B.phases[ph][1] - 0; left = B.phases[ph][1]; } breath = setTimeout(tick, 1000); }; tick(); };
+
+// ---------- tools ----------
+function toolsFor(id){ return id === 'singer' ? [['tuner','Pitch and vowel tuner (mic)'],['ear','Interval ear trainer'],['runs','Run builder'],['cons','Consonant coach']] : [['metro','Metronome and tap tempo'],['rhyme','Rhyme lab'],['grid','Flow grid'],['free','Freestyle prompter'],['bars','Bar timer']]; }
+$('toolSel').onchange = renderTool;
+let stopFns = []; function stopAll(){ stopFns.forEach(f => { try { f(); } catch(e){} }); stopFns = []; stopBreath(); }
+function renderTool(){ stopAll(); const b = $('toolBody'); b.textContent = ''; const v = $('toolSel').value; const f = { tuner: tTuner, ear: tEar, runs: tRuns, cons: tCons, metro: tMetro, rhyme: tRhyme, grid: tGrid, free: tFree, bars: tBars }[v]; if (f) f(b); }
+function card(b, title, sub){ const c = el('div', 'card'); c.appendChild(el('h2', null, title)); if (sub) c.appendChild(el('p', 'mute', sub)); b.appendChild(c); return c; }
+function lab(txt, input){ const l = el('label', null, txt); l.appendChild(input); return l; }
+function inputEl(type, id, val, attrs){ const i = el('input'); i.type = type; i.id = id; i.value = val; Object.assign(i, attrs || {}); return i; }
+function sel(id, opts, val){ const s = el('select'); s.id = id; opts.forEach(o => { const x = el('option', null, Array.isArray(o) ? o[1] : o); x.value = Array.isArray(o) ? o[0] : o; s.appendChild(x); }); if (val != null) s.value = val; return s; }
+
+// --- rapper tools
+function tRhyme(b){ const c = card(b, 'Rhyme lab', 'Spelling-based: it reads how a word is written, not how it sounds. My word bank is a few hundred clean words.'); const i = inputEl('text', 'rw', 'night'), go = el('button', 'btn pri', 'Find rhymes'); go.type = 'button'; const out = el('div'); c.appendChild(el('div', 'row')).append(lab('Word', i), go); c.appendChild(out);
+  const run = () => { out.textContent = ''; const w = i.value.trim().toLowerCase().replace(/[^a-z]/g, ''); if (!w) return; const r = FS.rhymesFor(w, 16); const sy = FS.syllabify(w); out.appendChild(el('p', 'mute', w + ': ' + sy.length + ' syllable(s). I read it as [' + FS.g2p(w).join(' ') + ']')); [['Perfect','perfect'],['Slant','slant'],['Near','near']].forEach(([l,k]) => { const d = el('div'); d.style.margin = '8px 0'; d.appendChild(el('h3', null, l)); (r[k].length ? r[k] : ['(none in my bank)']).forEach(x => d.appendChild(el('span', 'tag', x))); out.appendChild(d); }); };
+  go.onclick = run; i.onkeydown = e => { if (e.key === 'Enter') run(); }; run(); }
+const SAMPLE = "I spit it slow, let the rhythm flow\nWatching the lights as the city glow\nTold myself I would never fall\nStand up tall when they call my name";
+function tGrid(b){ const c = card(b, 'Flow grid', 'One bar per line. X = stressed syllable, shaded = unstressed. Each group of four cells is one beat. This is an estimate from spelling; say the line over a beat to check.'); const ta = el('textarea'); ta.id = 'fgIn'; ta.rows = 5; ta.value = SAMPLE; const go = el('button', 'btn pri', 'Analyze'); go.type = 'button'; go.style.marginTop = '8px'; const out = el('div'); c.append(ta, go, out);
+  const run = () => { out.textContent = ''; const v = FS.analyzeVerse(ta.value); v.bars.forEach((a, i) => { const h = el('div', 'mute', 'Bar ' + (i+1) + ' [' + v.scheme[i] + '] · ' + a.n + ' syllables · ' + a.density + (a.stressed ? ' · ' + a.onBeat + '/' + a.stressed + ' stressed on a beat' : '')); h.style.marginTop = '12px'; out.appendChild(h); const sc = el('div', 'scroll'), g = el('div', 'grid16'); for (let k = 0; k < 16; k++) { const cell = a.grid && a.grid[k]; const d = el('div', 'cell' + (k % 4 === 0 ? ' b' : '') + (cell ? (cell.stress ? ' s' : ' u') : ''), cell ? cell.t : ''); d.title = cell ? cell.t : 'rest'; g.appendChild(d); } sc.appendChild(g); out.appendChild(sc); a.notes.forEach(n => out.appendChild(el('div', 'mute', '• ' + n))); }); const tips = el('div'); tips.style.marginTop = '14px'; tips.appendChild(el('h3', null, 'Verse notes')); v.tips.forEach(t => tips.appendChild(el('p', null, t))); out.appendChild(tips); };
+  go.onclick = run; run(); }
+function tFree(b){ const c = card(b, 'Freestyle prompter', 'Press New prompt, or start the metronome tool first and use Auto to get fresh words every 4 bars.'); const out = el('div'); const go = el('button', 'btn pri', 'New prompt'); go.type = 'button'; const auto = el('button', 'btn', 'Auto: every 4 bars (10 s at 96 bpm)'); auto.type = 'button'; c.append(go, auto, out); let timer = null;
+  const mk = () => { out.textContent = ''; const kv = el('dl', 'kv'); [['Scene', FS.pick(FS.FREE_IMAGES)],['Theme', FS.pick(FS.FREE_THEMES)],['Words to land', FS.shuffle(FS.FREE_WORDS).slice(0,4).join(', ')],['Rhyme family', FS.pick(['-ine','-ight','-ow','-ay','-ame','-ound','-ing'])]].forEach(([k,v]) => { kv.appendChild(el('dt', null, k)); kv.appendChild(el('dd', null, v)); }); out.appendChild(kv); };
+  go.onclick = mk; auto.onclick = () => { if (timer) { clearInterval(timer); timer = null; auto.textContent = 'Auto: every 4 bars (10 s at 96 bpm)'; return; } mk(); timer = setInterval(mk, 10000); auto.textContent = 'Stop auto'; }; stopFns.push(() => { if (timer) clearInterval(timer); }); mk(); }
+function tBars(b){ const c = card(b, 'Bar timer'); const bp = inputEl('number', 'bt', 90, { min: 50, max: 200 }); const out = el('div'); c.append(lab('BPM', bp), out); const run = () => { const v = Math.max(50, Math.min(200, parseInt(bp.value, 10) || 90)); out.textContent = ''; const kv = el('dl', 'kv'); [['1 bar', FS.barSeconds(v).toFixed(2) + ' s'],['4 bars', FS.verseSeconds(v,4).toFixed(1) + ' s'],['16 bars', FS.verseSeconds(v,16).toFixed(1) + ' s'],['One beat', FS.beatMs(v).toFixed(0) + ' ms'],['One 16th note', (FS.beatMs(v)/4).toFixed(0) + ' ms'],['8 / 12 / 16 syllables per bar', [8,12,16].map(n => FS.sylPerSecond(n, v).toFixed(1)).join(' / ') + ' per second']].forEach(([k,x]) => { kv.appendChild(el('dt', null, k)); kv.appendChild(el('dd', null, x)); }); out.appendChild(kv); }; bp.oninput = run; run(); }
+function tMetro(b){ const c = card(b, 'Metronome', 'Count bars out loud. Swing delays the off-beat 16th notes, so you can feel the pocket change. Sound starts when you press Start.'); const bpm = inputEl('number', 'mb', 90, { min: 50, max: 180 }), sw = inputEl('number', 'ms', 0, { min: 0, max: 60 }), go = el('button', 'btn pri', 'Start'); go.type = 'button'; const tap = el('button', 'btn', 'Tap tempo'); tap.type = 'button';
+  const r = el('div', 'row'); r.append(lab('BPM', bpm), lab('Swing %', sw), go, tap); c.appendChild(r); const dots = el('div', 'dots'); const ds = [0,1,2,3].map(i => { const d = el('div', 'dot'); dots.appendChild(d); return d; }); c.appendChild(dots); const bar = el('div', 'big', '—'); c.appendChild(bar); const note = el('div', 'mute', 'Bar counter runs 1 to 16. Subdivisions: ticks on beats, softer ticks on the off-beat 16ths.'); c.appendChild(note);
+  let run = null, next = 0, step = 0, barN = 0, timer = null; const taps = [];
+  const sched = () => { const cx = ac(); if (!cx) return; const B = Math.max(50, Math.min(180, parseInt(bpm.value, 10) || 90)), sp = 60 / B / 4, swing = (parseInt(sw.value, 10) || 0) / 100; while (next < cx.currentTime + 0.15) { const s = step % 16, off = (s % 2 === 1) ? swing * sp : 0, t = next + off; if (s % 4 === 0) { click(t, s === 0); const beat = s / 4, bn = barN, d = ds[beat]; setTimeout(() => { ds.forEach((x, i) => x.classList.toggle('on', i === beat)); bar.textContent = 'Bar ' + (bn % 16 + 1); }, Math.max(0, (t - cx.currentTime) * 1000)); } else if (s % 2 === 0) click(t, false); step++; if (step % 16 === 0) barN++; next += sp; } };
+  const stop = () => { if (timer) clearInterval(timer); timer = null; go.textContent = 'Start'; ds.forEach(x => x.classList.remove('on')); }; stopFns.push(stop);
+  go.onclick = () => { if (timer) { stop(); return; } const cx = ac(); if (!cx) { note.textContent = 'Audio is not available in this browser.'; return; } next = cx.currentTime + 0.1; step = 0; barN = 0; timer = setInterval(sched, 25); go.textContent = 'Stop'; sched(); };
+  tap.onclick = () => { const now = performance.now(); if (taps.length && now - taps[taps.length-1] > 2000) taps.length = 0; taps.push(now); if (taps.length > 8) taps.shift(); const t = FS.tapTempo(taps); if (t) bpm.value = Math.max(50, Math.min(180, t)); }; }
+
+// --- singer tools
+function tCons(b){ const c = card(b, 'Consonant coach', 'Type a word. I split it into syllables from its spelling and tell you how to handle the consonants when you sing it. Estimates can be wrong on unusual words.'); const i = inputEl('text', 'cw', 'beautiful'), go = el('button', 'btn pri', 'Coach me'); go.type = 'button'; const out = el('div'); const r = el('div', 'row'); r.append(lab('Word', i), go); c.append(r, out);
+  const run = () => { out.textContent = ''; const w = i.value.trim().toLowerCase().replace(/[^a-z]/g, ''); if (!w) return; out.appendChild(el('p', 'mute', 'I read it as [' + FS.g2p(w).join(' ') + ']')); FS.coachWord(w).forEach(s => { const d = el('div'); d.style.cssText = 'border-top:1px solid var(--line);padding:8px 0'; d.appendChild(el('h3', null, 'Syllable ' + s.idx + ' · vowel ' + s.vowel + (s.stress ? ' · stressed' : '') + (s.holdable ? ' · good to hold' : ''))); d.appendChild(el('div', 'mute', 'Start: ' + (s.onset.map(x => x.t + ' (' + x.c.join(', ') + ')').join(' + ') || 'vowel') + '   End: ' + (s.coda.map(x => x.t + ' (' + x.c.join(', ') + ')').join(' + ') || 'vowel'))); s.tips.forEach(t => d.appendChild(el('div', null, t))); out.appendChild(d); }); };
+  go.onclick = run; i.onkeydown = e => { if (e.key === 'Enter') run(); }; run(); }
+function tRuns(b){ const c = card(b, 'Run builder', 'Short stepwise runs inside one octave, built to land on a held note. Learn it slowly on one vowel before you speed it up.'); const scale = sel('rs', [['major pentatonic','Major pentatonic'],['minor pentatonic','Minor pentatonic'],['blues','Blues']]), lv = sel('rl', [['1','Easy (4 notes)'],['2','Medium (6)'],['3','Hard (8)']]), dir = sel('rd', [['up','Up'],['down','Down'],['wave','Up and down']]), bpm = inputEl('number', 'rb', 60, { min: 40, max: 120 }); const gen = el('button', 'btn pri', 'New run'), play = el('button', 'btn', 'Play'); gen.type = play.type = 'button'; const r = el('div', 'row'); r.append(lab('Scale', scale), lab('Level', lv), lab('Direction', dir), lab('BPM (one note per beat)', bpm), gen, play); c.appendChild(r); const out = el('div'); out.style.marginTop = '10px'; c.appendChild(out); let cur = null;
+  const mk = () => { cur = FS.genRun({ tonic: 60, scale: scale.value, level: parseInt(lv.value, 10), dir: dir.value }); out.textContent = ''; const big = el('div', 'big', cur.names.join(' ')); big.style.cssText = 'font-size:24px;line-height:1.3;overflow-wrap:anywhere'; out.appendChild(big); out.appendChild(el('p', 'mute', 'In C, ' + cur.scale + ', ' + cur.dir + '. Then hold the last note.')); const ul = el('ul', 'plain'); cur.tips.forEach(t => ul.appendChild(el('li', null, t))); out.appendChild(ul); };
+  gen.onclick = mk; play.onclick = () => { if (!cur) mk(); const cx = ac(); if (!cx) return; const B = Math.max(40, Math.min(120, parseInt(bpm.value, 10) || 60)), d = 60 / B, t0 = cx.currentTime + 0.1; cur.notes.forEach((n, i) => tone(n, t0 + i * d, d * 0.9, 'triangle', 0.25)); const last = cur.notes[cur.notes.length - 1]; tone(last, t0 + cur.notes.length * d, d * 2, 'triangle', 0.22); }; mk(); }
+let eq = null;
+function tEar(b){ const c = card(b, 'Interval ear trainer', 'Listen to two notes, then choose the interval. Start with small sets.'); const max = sel('em', [['7','Up to a 5th'],['12','Up to an octave']], '7'); const play = el('button', 'btn pri', 'New interval'), again = el('button', 'btn', 'Hear it again'); play.type = again.type = 'button'; const r = el('div', 'row'); r.append(lab('Range', max), play, again); c.appendChild(r); const ans = el('div'); ans.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;margin:12px 0'; c.appendChild(ans); const fb = el('div', null, 'Press New interval to begin.'); c.appendChild(fb); let score = 0, tries = 0; const sc = el('div', 'mute', 'Score 0/0'); c.appendChild(sc);
+  const hear = () => { if (!eq) return; const cx = ac(); if (!cx) { fb.textContent = 'Audio is not available in this browser.'; return; } const t0 = cx.currentTime + 0.1; tone(eq.low, t0, 0.8, 'triangle', 0.25); tone(eq.high, t0 + 1, 0.8, 'triangle', 0.25); };
+  const mk = () => { eq = FS.intervalQuestion(parseInt(max.value, 10)); fb.textContent = 'What interval did you hear?'; ans.textContent = ''; FS.INTERVALS.filter(i => i.n > 0 && i.n <= parseInt(max.value, 10)).forEach(i => { const bt = el('button', 'chip', i.name); bt.type = 'button'; bt.onclick = () => { tries++; const ok = i.n === eq.answer; if (ok) score++; fb.textContent = (ok ? 'Correct. ' : 'Not quite. ') + 'It was a ' + eq.name + ' (' + eq.answer + ' semitones, ' + FS.midiName(eq.low) + ' up to ' + eq.note + ').' + (FS.INTERVAL_SONG_HINTS && FS.INTERVAL_SONG_HINTS[eq.answer] ? ' ' + FS.INTERVAL_SONG_HINTS[eq.answer] : ''); sc.textContent = 'Score ' + score + '/' + tries; }; ans.appendChild(bt); }); hear(); };
+  play.onclick = mk; again.onclick = hear; }
+function tTuner(b){ const c = card(b, 'Pitch and vowel tuner', 'Sing one steady vowel. You see your note, how many cents sharp or flat, and a rough vowel guess from F1 and F2. Formant readings are estimates and work best below about 260 Hz; they can lock onto harmonics on higher notes. Young voices have higher formants than the adult reference values used here.'); const go = el('button', 'btn pri', 'Start mic'); go.type = 'button'; const st = el('div', 'mute', 'Idle. The microphone only works if your browser allows it on this page.'); c.append(go, st); const note = el('div', 'big', '—'); const m = el('div', 'meter'); m.appendChild(el('b')); const needle = el('i'); m.appendChild(needle); const kv = el('dl', 'kv'); c.append(note, m, kv);
+  let stream = null, an = null, timer = null, src = null; const stop = () => { if (timer) clearInterval(timer); timer = null; if (stream) stream.getTracks().forEach(t => t.stop()); stream = null; try { src && src.disconnect(); } catch(e){} src = null; go.textContent = 'Start mic'; }; stopFns.push(stop);
+  const REF = [['ee',300,2300],['eh',550,1900],['ah',750,1200],['oh',500,900],['oo',320,850]];
+  go.onclick = async () => { if (stream) { stop(); st.textContent = 'Stopped.'; return; } try { if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('no'); const cx = ac(); stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } }); src = cx.createMediaStreamSource(stream); an = cx.createAnalyser(); an.fftSize = 4096; src.connect(an); go.textContent = 'Stop mic'; st.textContent = 'Listening. Sing a steady vowel.'; const buf = new Float32Array(an.fftSize), hist = [];
+      timer = setInterval(() => { an.getFloatTimeDomainData(buf); const r = DSP.analyze(buf, cx.sampleRate); if (!r.voiced || !r.f0) { return; } hist.push(r); if (hist.length > 5) hist.shift(); const med = k => { const a = hist.map(x => x[k]).filter(Boolean).sort((p,q) => p-q); return a.length ? a[Math.floor(a.length/2)] : null; }; const f0 = med('f0'), F1 = med('F1'), F2 = med('F2'), n = FS.hzToNote(f0); if (!n) return; note.textContent = n.name + ' ' + (n.cents >= 0 ? '+' : '') + n.cents + '¢'; needle.style.left = (50 + Math.max(-50, Math.min(50, n.cents))) * 0.98 + '%'; kv.textContent = ''; const add = (k, v) => { kv.appendChild(el('dt', null, k)); kv.appendChild(el('dd', null, v)); }; add('Pitch', f0.toFixed(1) + ' Hz'); if (F1 && F2 && f0 < 330) { let best = null, bd = 1e9; REF.forEach(rf => { const d = Math.hypot((F1 - rf[1]) / 150, (F2 - rf[2]) / 500); if (d < bd) { bd = d; best = rf[0]; } }); add('F1 / F2', Math.round(F1) + ' / ' + Math.round(F2) + ' Hz'); add('Closest vowel', best + ' (rough guess)'); } else add('Formants', f0 >= 330 ? 'not shown: pitch is too high for a reliable reading' : 'not clear yet'); }, 80);
+    } catch (e) { stop(); st.textContent = 'This page cannot use the microphone here (blocked by the viewer or by permission). Open the downloaded standalone file in your browser, or use the other tools.'; } }; }
+
+// ---------- boot ----------
+setBot(botId);
+})();
+</script>
